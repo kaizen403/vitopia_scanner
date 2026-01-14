@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  User,
 } from "lucide-react";
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 import { verifyTicket, ScanResult, getEvents, Event } from "@/lib/api";
@@ -30,12 +29,31 @@ interface ScanRecord {
   status: "success" | "failed";
   timestamp: number;
   reason?: string;
+  checkedInAt?: number;
 }
 
 function formatEventName(name: string): string {
   if (name === "Vitopia2026-Day1") return "Vitopia Day 1";
   if (name === "Vitopia2026-Day2") return "Vitopia Day 2";
   return name;
+}
+
+function formatTime(timestamp?: number): string {
+  if (!timestamp) return "";
+  return new Date(timestamp).toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getFailureMessage(result: ScanResult): string {
+  if (result.code === "NOT_PAID") return "Not paid";
+  if (result.code === "NOT_FOUND") return "Not found";
+  if (result.code === "INVALID_QR") return "Invalid QR";
+  if (result.code === "ALREADY_USED" && result.checkedInAt) {
+    return `Scanned ${formatTime(result.checkedInAt)}`;
+  }
+  return result.error || result.code;
 }
 
 export default function Home() {
@@ -167,7 +185,8 @@ export default function Home() {
         orderId: result.data?.orderId || "",
         status: result.success ? "success" : "failed",
         timestamp: Date.now(),
-        reason: result.error || result.code,
+        reason: getFailureMessage(result),
+        checkedInAt: result.checkedInAt,
       };
 
       setScanHistory((prev) => [record, ...prev]);
@@ -408,6 +427,9 @@ export default function Home() {
                   <div className="flex-1 min-w-0">
                     <p className="text-white truncate">{scan.name}</p>
                     <p className="text-[10px] text-[#99A1AF] truncate">{scan.reason}</p>
+                    {scan.checkedInAt && (
+                      <p className="text-[10px] text-[#99A1AF]">Last scanned {formatTime(scan.checkedInAt)}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -461,6 +483,14 @@ export default function Home() {
                 <p className={`text-sm ${status === "success" || status === "already_used" ? "text-black/70" : "text-white/70"}`}>
                   {lastResult.data.user.name}
                 </p>
+              )}
+              {status === "already_used" && lastResult?.checkedInAt && (
+                <p className={`text-xs ${status === "already_used" ? "text-black/70" : "text-white/70"}`}>
+                  Last scanned {formatTime(lastResult.checkedInAt)}
+                </p>
+              )}
+              {status === "error" && lastResult?.error && (
+                <p className="text-xs text-white/80">{lastResult.error}</p>
               )}
             </div>
           )}

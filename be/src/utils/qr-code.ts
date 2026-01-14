@@ -48,18 +48,18 @@ export function verifyQRCode(token: string): {
 
     // Check expiration
     if (payload.expiresAt < Date.now()) {
-      return { valid: false, error: "QR code has expired" };
+      return { valid: false, error: "Expired QR" };
     }
 
     return { valid: true, payload };
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      return { valid: false, error: "Invalid QR code signature" };
+      return { valid: false, error: "Invalid QR" };
     }
     if (error instanceof jwt.TokenExpiredError) {
-      return { valid: false, error: "QR code has expired" };
+      return { valid: false, error: "Expired QR" };
     }
-    return { valid: false, error: "Failed to verify QR code" };
+    return { valid: false, error: "Invalid QR" };
   }
 }
 

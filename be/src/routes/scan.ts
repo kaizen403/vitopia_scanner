@@ -159,9 +159,9 @@ router.post(
           });
 
           const errorMessages: Record<string, string> = {
-            already_used: "Ticket has already been used",
-            not_found: "Ticket not found",
-            not_paid: "Ticket payment not completed",
+            already_used: "Already scanned",
+            not_found: "Not found",
+            not_paid: "Not paid",
           };
 
           const statusCodes: Record<string, number> = {
