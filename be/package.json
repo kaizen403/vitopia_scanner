@@ -7,7 +7,8 @@
     "dev": "concurrently \"npm run dev:convex\" \"npm run dev:server\"",
     "dev:convex": "convex dev",
     "dev:server": "NODE_OPTIONS='--no-network-family-autoselection' tsx watch src/server.ts",
-    "build": "convex codegen && tsc",
+    "build": "tsc",
+    "build:local": "convex codegen && tsc",
     "start": "node dist/server.js",
     "convex:deploy": "convex deploy"
   },

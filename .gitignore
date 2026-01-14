@@ -33,7 +33,7 @@ Thumbs.db
 *.swo
 
 # Convex
-**/convex/_generated/
+# **/convex/_generated/
 
 # TypeScript
 *.tsbuildinfo
