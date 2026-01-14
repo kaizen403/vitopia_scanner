@@ -3,6 +3,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { getRedisLockManager } from "../utils/redis-lock.js";
 import { verifyQRCode } from "../utils/qr-code.js";
 import { gateAuthMiddleware, rateLimitMiddleware } from "../middleware/auth.js";
+import { loadConvexApi } from "../utils/convex-api.js";
 
 const router: Router = Router();
 
@@ -18,14 +19,7 @@ const getConvex = () => {
 };
 
 // Helper to get Convex API - dynamically loaded after convex dev generates types
-const getApi = async () => {
-  try {
-    const { api } = await import("../../convex/_generated/api.js");
-    return api;
-  } catch {
-    throw new Error("Convex API not generated. Run 'npx convex dev' first.");
-  }
-};
+const getApi = async () => loadConvexApi();
 
 /**
  * POST /api/scan/verify

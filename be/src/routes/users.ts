@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Router, Request, Response } from "express";
 import { ConvexHttpClient } from "convex/browser";
+import { loadConvexApi } from "../utils/convex-api.js";
 
 const router: Router = Router();
 
@@ -16,14 +17,7 @@ const getConvex = () => {
 };
 
 // Helper to get Convex API
-const getApi = async () => {
-  try {
-    const { api } = await import("../../convex/_generated/api.js");
-    return api;
-  } catch {
-    throw new Error("Convex API not generated. Run 'npx convex dev' first.");
-  }
-};
+const getApi = async () => loadConvexApi();
 
 /**
  * POST /api/users
