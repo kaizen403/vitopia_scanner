@@ -302,36 +302,38 @@ export default function Home() {
 
           {!loading && (
             <div className="space-y-3">
-              {events.map((event) => (
-                <button
-                  key={event._id}
-                  onClick={() => setSelectedEvent(event)}
-                  className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-4 text-left active:scale-[0.98] transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#1a1a1a]">
-                      <Calendar className="w-5 h-5 text-[#9AE600]" />
+              {events
+                .filter((event) => event.name === "Vitopia2026-Day1")
+                .map((event) => (
+                  <button
+                    key={event._id}
+                    onClick={() => setSelectedEvent(event)}
+                    className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-4 text-left active:scale-[0.98] transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-[#1a1a1a]">
+                        <Calendar className="w-5 h-5 text-[#9AE600]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-base font-semibold text-white truncate">
+                          {formatEventName(event.name)}
+                        </h2>
+                        <p className="text-xs text-[#99A1AF]">
+                          {new Date(event.date).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })} • {event.venue}
+                        </p>
+                      </div>
+                      <Camera className="w-5 h-5 text-[#9AE600]" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-base font-semibold text-white truncate">
-                        {formatEventName(event.name)}
-                      </h2>
-                      <p className="text-xs text-[#99A1AF]">
-                        {new Date(event.date).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })} • {event.venue}
-                      </p>
-                    </div>
-                    <Camera className="w-5 h-5 text-[#9AE600]" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
 
-              {events.length === 0 && (
+              {events.filter((event) => event.name === "Vitopia2026-Day1").length === 0 && (
                 <div className="text-center py-10 text-[#99A1AF]">
-                  <p>No events available</p>
+                  <p>No Day 1 events available</p>
                 </div>
               )}
             </div>

@@ -24,8 +24,7 @@ if (!fs.existsSync(outputDir)) {
 
 console.log("Fetching Day1 orders via Convex CLI...");
 
-// Use Convex CLI which seems more stable
-const result = execSync('npx convex run orders:adjustVitopiaSeed \'{}\'', {
+const result = execSync('npx convex run orders:listDay1Orders \'{}\'', {
   cwd: '/home/kaizen/opus-fest/be',
   encoding: 'utf-8',
   timeout: 60000
@@ -33,6 +32,16 @@ const result = execSync('npx convex run orders:adjustVitopiaSeed \'{}\'', {
 
 const data = JSON.parse(result);
 const orders = data.day1Orders;
+
+const scannedDir = path.join(outputDir, "scanned");
+const unscannedDir = path.join(outputDir, "unscanned");
+
+if (!fs.existsSync(scannedDir)) {
+  fs.mkdirSync(scannedDir, { recursive: true });
+}
+if (!fs.existsSync(unscannedDir)) {
+  fs.mkdirSync(unscannedDir, { recursive: true });
+}
 
 console.log(`Found ${orders.length} Day1 orders`);
 console.log("Generating QR codes...\n");
@@ -49,10 +58,13 @@ for (const order of orders) {
   };
 
   const token = jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
-  const filename = path.join(outputDir, `${order.orderId}.png`);
+  const targetDir = order.checkedIn ? scannedDir : unscannedDir;
+  const filename = path.join(targetDir, `${order.orderId}.png`);
   await QRCode.toFile(filename, token, { width: 512, margin: 2 });
   count++;
   process.stdout.write(`\rGenerated ${count}/${orders.length} QR codes`);
 }
 
 console.log(`\n\nDone! Generated ${count} QR codes in ${outputDir}`);
+console.log(`Scanned: ${scannedDir}`);
+console.log(`Unscanned: ${unscannedDir}`);

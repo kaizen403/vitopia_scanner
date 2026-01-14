@@ -254,6 +254,76 @@ export const getScanLogs = query({
   },
 });
 
+// List Day1 orders with check-in status
+export const listDay1Orders = query({
+  args: {},
+  handler: async (ctx) => {
+    const day1Event = await ctx.db
+      .query("events")
+      .filter((q) => q.eq(q.field("name"), "Vitopia2026-Day1"))
+      .first();
+
+    if (!day1Event) {
+      throw new Error("Vitopia Day 1 event not found");
+    }
+
+    const day1Orders = await ctx.db
+      .query("orders")
+      .withIndex("by_eventId", (q) => q.eq("eventId", day1Event._id))
+      .order("desc")
+      .collect();
+
+    const enriched = await Promise.all(
+      day1Orders.map(async (order) => {
+        const user = await ctx.db.get(order.userId);
+        return {
+          orderId: order.orderId,
+          eventId: order.eventId,
+          userId: order.userId,
+          quantity: order.quantity,
+          checkedIn: order.checkedIn,
+          checkedInAt: order.checkedInAt,
+          name: user?.name || "",
+          email: user?.email || "",
+        };
+      })
+    );
+
+    return { day1EventId: day1Event._id, day1Orders: enriched };
+  },
+});
+
+// Reset Day1 check-in status (make all unscanned)
+export const resetDay1Checkins = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const day1Event = await ctx.db
+      .query("events")
+      .filter((q) => q.eq(q.field("name"), "Vitopia2026-Day1"))
+      .first();
+
+    if (!day1Event) {
+      throw new Error("Vitopia Day 1 event not found");
+    }
+
+    const day1Orders = await ctx.db
+      .query("orders")
+      .withIndex("by_eventId", (q) => q.eq("eventId", day1Event._id))
+      .collect();
+
+    for (const order of day1Orders) {
+      await ctx.db.patch(order._id, {
+        checkedIn: false,
+        checkedInAt: undefined,
+        checkedInBy: undefined,
+        updatedAt: Date.now(),
+      });
+    }
+
+    return { resetCount: day1Orders.length };
+  },
+});
+
 // Adjust Vitopia seed data and return Day1 orders
 export const adjustVitopiaSeed = mutation({
   args: {},
