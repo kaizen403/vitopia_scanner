@@ -6,10 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   RefreshCw,
-  Users,
-  Ticket,
-  CheckCircle2,
-  Clock,
   AlertCircle,
   Search,
   ChevronDown,
@@ -134,10 +130,6 @@ function Dashboard() {
   if (!data) return null;
 
   const { analytics, scanLogs } = data;
-  const checkedInPercent =
-    analytics.totalTicketsSold > 0
-      ? Math.round((analytics.totalCheckedIn / analytics.totalTicketsSold) * 100)
-      : 0;
 
   const filteredLogs = scanLogs.filter((log) => {
     if (filterEvent !== "all" && log.eventName !== filterEvent) return false;
@@ -190,34 +182,6 @@ function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <AnalyticsCard
-            icon={<Ticket className="w-5 h-5" />}
-            label="Total Sold"
-            value={analytics.totalTicketsSold}
-            accent="green"
-          />
-          <AnalyticsCard
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            label="Checked In"
-            value={analytics.totalCheckedIn}
-            accent="green"
-            sub={`${checkedInPercent}%`}
-          />
-          <AnalyticsCard
-            icon={<Clock className="w-5 h-5" />}
-            label="Remaining"
-            value={analytics.totalRemaining}
-            accent="yellow"
-          />
-          <AnalyticsCard
-            icon={<Users className="w-5 h-5" />}
-            label="Scan Logs"
-            value={scanLogs.length}
-            accent="blue"
-          />
-        </div>
-
         {analytics.events.length > 0 && (
           <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl p-5">
             <h2 className="font-heading text-lg tracking-wide text-white mb-4">
@@ -363,40 +327,6 @@ function Dashboard() {
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-function AnalyticsCard({
-  icon,
-  label,
-  value,
-  accent,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  accent: "green" | "yellow" | "blue";
-  sub?: string;
-}) {
-  const accentStyles = {
-    green: { iconBg: "bg-[#1a2e00]", iconText: "text-[#9AE600]" },
-    yellow: { iconBg: "bg-[#2d1f05]", iconText: "text-[#f59e0b]" },
-    blue: { iconBg: "bg-[#0a1a2d]", iconText: "text-[#3b82f6]" },
-  };
-  const s = accentStyles[accent];
-
-  return (
-    <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl p-4 sm:p-5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.iconBg} ${s.iconText}`}>
-        {icon}
-      </div>
-      <p className="text-xs text-[#99A1AF] uppercase tracking-wider">{label}</p>
-      <div className="flex items-baseline gap-2 mt-1">
-        <span className="text-2xl font-bold text-white">{value.toLocaleString()}</span>
-        {sub && <span className="text-sm text-[#9AE600]">{sub}</span>}
-      </div>
     </div>
   );
 }
