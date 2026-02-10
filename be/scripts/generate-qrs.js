@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 
 const require = createRequire(import.meta.url);
 const dotenv = require("dotenv");
-const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const QRCode = require("qrcode");
 
 dotenv.config({ path: path.resolve("/home/kaizen/opus-fest/be/.env") });
@@ -16,6 +16,8 @@ if (!jwtSecret) {
   console.error("Missing JWT_SECRET in .env");
   process.exit(1);
 }
+
+const HMAC_SIG_LENGTH = 12;
 
 const outputDir = "/home/kaizen/opus-fest/QRs";
 if (!fs.existsSync(outputDir)) {
@@ -48,14 +50,20 @@ console.log("Generating QR codes...\n");
 
 let count = 0;
 for (const order of orders) {
-  const payload = {
-    orderId: order.orderId,
-  };
-
-  const token = jwt.sign(payload, jwtSecret, { algorithm: "HS256", noTimestamp: true });
+  const sig = crypto
+    .createHmac("sha256", jwtSecret)
+    .update(order.orderId)
+    .digest("hex")
+    .toUpperCase()
+    .slice(0, HMAC_SIG_LENGTH);
+  const token = `${order.orderId}.${sig}`;
   const targetDir = order.checkedIn ? scannedDir : unscannedDir;
   const filename = path.join(targetDir, `${order.orderId}.png`);
-  await QRCode.toFile(filename, token, { width: 512, margin: 2 });
+  await QRCode.toFile(filename, token, {
+    width: 300,
+    margin: 2,
+    errorCorrectionLevel: "L",
+  });
   count++;
   process.stdout.write(`\rGenerated ${count}/${orders.length} QR codes`);
 }
