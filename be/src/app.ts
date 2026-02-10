@@ -11,6 +11,7 @@ import eventsRoutes from "./routes/events.js";
 import ordersRoutes from "./routes/orders.js";
 import usersRoutes from "./routes/users.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import authRoutes from "./routes/auth.js";
 import { errorHandler } from "./middleware/auth.js";
 
 type AppOptions = {
@@ -61,6 +62,7 @@ export const createApp = ({ enableNotFound = true }: AppOptions = {}): express.E
   app.use("/api/events", eventsRoutes);
   app.use("/api/orders", ordersRoutes);
   app.use("/api/users", usersRoutes);
+  app.use("/api/auth", authRoutes);
   app.use("/api/dashboard", dashboardRoutes);
 
   // Error handling
