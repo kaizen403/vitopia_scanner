@@ -397,6 +397,33 @@ export const getDashboardData = query({
   },
 });
 
+// Clear ALL orders, scanLogs, and users from DB (destructive - use for re-seeding)
+export const clearAllData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const orders = await ctx.db.query("orders").collect();
+    for (const order of orders) {
+      await ctx.db.delete(order._id);
+    }
+
+    const scanLogs = await ctx.db.query("scanLogs").collect();
+    for (const log of scanLogs) {
+      await ctx.db.delete(log._id);
+    }
+
+    const users = await ctx.db.query("users").collect();
+    for (const user of users) {
+      await ctx.db.delete(user._id);
+    }
+
+    return {
+      deletedOrders: orders.length,
+      deletedScanLogs: scanLogs.length,
+      deletedUsers: users.length,
+    };
+  },
+});
+
 // Adjust Vitopia seed data and return Day1 orders
 export const adjustVitopiaSeed = mutation({
   args: {},
