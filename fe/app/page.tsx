@@ -18,7 +18,6 @@ import {
   LayoutDashboard,
   Lock,
 } from "lucide-react";
-import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 import { verifyTicket, ScanResult, getEvents, Event } from "@/lib/api";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error" | "already_used";
@@ -59,6 +58,14 @@ function getFailureMessage(result: ScanResult): string {
   return result.error || result.code;
 }
 
+declare global {
+  interface Window {
+    BarcodeDetector?: new (options?: { formats: string[] }) => {
+      detect: (source: HTMLVideoElement | HTMLCanvasElement | ImageBitmap) => Promise<Array<{ rawValue: string }>>;
+    };
+  }
+}
+
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,8 +83,8 @@ export default function Home() {
   const [showRejected, setShowRejected] = useState(false);
   const lastScannedRef = useRef<string>("");
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const barcodeReaderRef = useRef<BrowserQRCodeReader | null>(null);
-  const scannerControlsRef = useRef<IScannerControls | null>(null);
+  const detectorRef = useRef<InstanceType<NonNullable<typeof window.BarcodeDetector>> | null>(null);
+  const rafIdRef = useRef<number>(0);
   const statusRef = useRef<ScanStatus>("idle");
 
   const verifiedScans = scanHistory.filter((s) => s.status === "success");
@@ -105,7 +112,8 @@ export default function Home() {
           facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 },
-        },
+          focusMode: "continuous",
+        } as MediaTrackConstraints,
       });
 
       if (videoRef.current) {
@@ -123,8 +131,8 @@ export default function Home() {
   }, []);
 
   const stopCamera = useCallback(() => {
-    scannerControlsRef.current?.stop();
-    scannerControlsRef.current = null;
+    cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = 0;
 
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
@@ -138,39 +146,74 @@ export default function Home() {
     if (!scanning || !videoRef.current) return;
 
     const video = videoRef.current;
-
-    if (!barcodeReaderRef.current) {
-      barcodeReaderRef.current = new BrowserQRCodeReader();
-    }
-
     let isActive = true;
 
-    const startDecode = async () => {
-      try {
-        const controls = await barcodeReaderRef.current!.decodeFromVideoElement(video, (result) => {
+    const useNative = typeof window !== "undefined" && !!window.BarcodeDetector;
+
+    if (useNative) {
+      if (!detectorRef.current) {
+        detectorRef.current = new window.BarcodeDetector!({ formats: ["qr_code"] });
+      }
+
+      let lastFrameTime = 0;
+      const scanLoop = async (timestamp: number) => {
+        if (!isActive) return;
+        if (timestamp - lastFrameTime < 80) {
+          rafIdRef.current = requestAnimationFrame(scanLoop);
+          return;
+        }
+        lastFrameTime = timestamp;
+
+        try {
+          if (video.readyState >= 2 && statusRef.current === "idle") {
+            const barcodes = await detectorRef.current!.detect(video);
+            if (isActive && barcodes.length > 0) {
+              const qrCode = barcodes[0].rawValue;
+              if (qrCode && qrCode !== lastScannedRef.current) {
+                lastScannedRef.current = qrCode;
+                void handleQRCodeDetected(qrCode);
+              }
+            }
+          }
+        } catch (_) { /* detection failed this frame, retry next */ }
+
+        if (isActive) {
+          rafIdRef.current = requestAnimationFrame(scanLoop);
+        }
+      };
+
+      rafIdRef.current = requestAnimationFrame(scanLoop);
+    } else {
+      let zxingReader: any = null;
+      let zxingControls: any = null;
+
+      const startZxing = async () => {
+        const { BrowserQRCodeReader } = await import("@zxing/browser");
+        if (!isActive) return;
+        zxingReader = new BrowserQRCodeReader();
+        zxingControls = await zxingReader.decodeFromVideoElement(video, (result: any) => {
           if (!isActive || !result) return;
           if (statusRef.current !== "idle") return;
-
           const qrCode = result.getText();
           if (qrCode !== lastScannedRef.current) {
             lastScannedRef.current = qrCode;
             void handleQRCodeDetected(qrCode);
           }
         });
+      };
 
-        scannerControlsRef.current = controls;
-      } catch (error) {
-        if (!isActive) return;
-        console.error("QR scanner error:", error);
-      }
-    };
+      startZxing().catch(console.error);
 
-    startDecode();
+      return () => {
+        isActive = false;
+        zxingControls?.stop();
+      };
+    }
 
     return () => {
       isActive = false;
-      scannerControlsRef.current?.stop();
-      scannerControlsRef.current = null;
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
     };
   }, [scanning, selectedEvent, gateId]);
 
@@ -253,8 +296,8 @@ export default function Home() {
 
   useEffect(() => {
     return () => {
-      scannerControlsRef.current?.stop();
-      scannerControlsRef.current = null;
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
 
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -560,36 +603,26 @@ export default function Home() {
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3">
-          {scanning ? (
-            <>
-              <button
-                onClick={stopCamera}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
-              >
-                <CameraOff className="w-5 h-5" />
-                Stop
-              </button>
-              <button
-                onClick={() => {
-                  setStatus("idle");
-                  lastScannedRef.current = "";
-                }}
-                className="py-3 px-4 bg-[#1a1a1a] text-white rounded-xl active:bg-[#2a2a2a] transition-colors"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
-            </>
-          ) : (
+        {scanning && (
+          <div className="flex gap-3">
             <button
-              onClick={startCamera}
-              className="flex-1 py-3.5 bg-[#9AE600] text-black rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
+              onClick={stopCamera}
+              className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
-              <Camera className="w-5 h-5" />
-              Start Scanning
+              <CameraOff className="w-5 h-5" />
+              Stop
             </button>
-          )}
-        </div>
+            <button
+              onClick={() => {
+                setStatus("idle");
+                lastScannedRef.current = "";
+              }}
+              className="py-3 px-4 bg-[#1a1a1a] text-white rounded-xl active:bg-[#2a2a2a] transition-colors"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

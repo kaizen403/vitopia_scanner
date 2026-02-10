@@ -132,12 +132,21 @@ export const checkIn = mutation({
       return { success: false, reason: "not_found", eventId: undefined };
     }
 
+    const user = await ctx.db.get(order.userId);
+    const event = await ctx.db.get(order.eventId);
+    const orderData = {
+      orderId: order.orderId,
+      quantity: order.quantity,
+    };
+    const userData = user ? { name: user.name, email: user.email } : null;
+    const eventData = event ? { name: event.name, venue: event.venue } : null;
+
     if (args.expectedEventId && order.eventId !== args.expectedEventId) {
-      return { success: false, reason: "wrong_event", eventId: order.eventId };
+      return { success: false, reason: "wrong_event", eventId: order.eventId, order: orderData, user: userData, event: eventData };
     }
 
     if (order.paymentStatus !== "paid") {
-      return { success: false, reason: "not_paid", eventId: order.eventId };
+      return { success: false, reason: "not_paid", eventId: order.eventId, order: orderData, user: userData, event: eventData };
     }
 
     if (order.checkedIn) {
@@ -147,6 +156,9 @@ export const checkIn = mutation({
         checkedInAt: order.checkedInAt,
         checkedInBy: order.checkedInBy,
         eventId: order.eventId,
+        order: orderData,
+        user: userData,
+        event: eventData,
       };
     }
 
@@ -157,19 +169,13 @@ export const checkIn = mutation({
       updatedAt: Date.now(),
     });
 
-    const user = await ctx.db.get(order.userId);
-    const event = await ctx.db.get(order.eventId);
-
     return {
       success: true,
       reason: "success",
       eventId: order.eventId,
-      order: {
-        orderId: order.orderId,
-        quantity: order.quantity,
-      },
-      user: user ? { name: user.name, email: user.email } : null,
-      event: event ? { name: event.name, venue: event.venue } : null,
+      order: orderData,
+      user: userData,
+      event: eventData,
     };
   },
 });

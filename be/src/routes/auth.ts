@@ -6,8 +6,8 @@ const router: Router = Router();
 const AUTH_SECRET = process.env.AUTH_SECRET || "opus-fest-auth-secret-2026";
 const AUTH_COOKIE_NAME = "opus-session";
 
-const VALID_USERNAME = "admin";
-const VALID_PASSWORD = "SIBI123";
+const VALID_USERNAME = "sibi";
+const VALID_PASSWORD = "sibi";
 
 router.post("/login", (req: Request, res: Response) => {
   const { username, password } = req.body;

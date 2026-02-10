@@ -64,11 +64,26 @@ router.post(
       // Step 2: Check Redis cache for fast rejection
       const cachedResult = await lockManager.getCachedScanResult(orderId);
       if (cachedResult.cached && cachedResult.result === "already_used") {
+        // Fetch user/order data for rejected entry display
+        let data: any = { orderId };
+        try {
+          const orderInfo = await getConvex().query(api.orders.getByOrderId, { orderId });
+          if (orderInfo) {
+            data = {
+              orderId: orderInfo.orderId,
+              quantity: orderInfo.quantity,
+              user: orderInfo.user ? { name: orderInfo.user.name, email: orderInfo.user.email } : null,
+              event: orderInfo.event ? { name: orderInfo.event.name, venue: orderInfo.event.venue } : null,
+            };
+          }
+        } catch (_) { /* best-effort */ }
+
         res.status(409).json({
           success: false,
           error: "Ticket has already been used",
           code: "ALREADY_USED",
           checkedInAt: cachedResult.checkedInAt,
+          data,
           responseTime: Date.now() - startTime,
         });
         return;
@@ -162,6 +177,12 @@ router.post(
             code: result.reason.toUpperCase(),
             checkedInAt: result.checkedInAt,
             checkedInBy: result.checkedInBy,
+            data: {
+              orderId: result.order?.orderId,
+              quantity: result.order?.quantity,
+              user: result.user,
+              event: result.event,
+            },
             responseTime: Date.now() - startTime,
           });
         }
