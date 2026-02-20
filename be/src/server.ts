@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { startVtopiaCronJob } from "./jobs/vtopiaSync.js";
 import { validateDatabaseUrl } from "./db/readiness.js";
 
 const parseDatabaseUrlOrThrow = (): URL => {
@@ -23,6 +24,9 @@ try {
 
 const app = createApp();
 const PORT = process.env.PORT || 3001;
+
+// Start background sync jobs
+startVtopiaCronJob();
 
 // Start server
 app.listen(PORT, () => {
