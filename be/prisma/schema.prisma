@@ -83,7 +83,7 @@ model Order {
   productMeta   String?       @map("product_meta")
   invoiceNumber String?       @map("invoice_number")
   sourceEventCode Int?        @map("source_event_code")
-  registrationId Int?         @unique @map("registration_id")
+  registrationId Int?         @map("registration_id")
   fieldValues   Json?         @map("field_values")
   accessTokens  String[]      @default([]) @map("access_tokens")
   tshirtEligible Boolean      @default(false) @map("tshirt_eligible")
