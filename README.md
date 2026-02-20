@@ -68,67 +68,35 @@ A QR-based entry verification system for college fests and events. This system a
 ### Prerequisites
 
 - Node.js 18+
-- pnpm (recommended) or npm
-- Redis server (local or cloud)
-- Convex account (free at convex.dev)
+- pnpm
+- Docker (for running local Redis and Database services)
 
-### 1. Backend Setup
+### Installation & Running Locally
 
-```bash
-cd be
+1. **Install dependencies from the project root:**
+   ```bash
+   pnpm install
+   ```
 
-# Install dependencies
-pnpm install
+2. **Setup Environment Variables:**
+   Make sure you have your `.env` and `.env.local` files configured in the respective `be`, `fe`, and `admin` directories as needed.
 
-# Copy environment file
-cp .env.example .env
+3. **Start external services (e.g. Redis):**
+   ```bash
+   pnpm run redis:up
+   ```
 
-# Edit .env with your values:
-# - CONVEX_URL: Your Convex deployment URL
-# - REDIS_URL: Your Redis connection string
-# - JWT_SECRET: A secure random string
+4. **Start all development servers (Frontend, Admin, and Backend):**
+   ```bash
+   pnpm run dev:all
+   ```
 
-# Initialize Convex (first time only)
-npx convex dev
+   This single command will launch:
+   - **Frontend App:** `http://localhost:3000`
+   - **Backend API:** `http://localhost:3001`
+   - **Admin Dashboard:** `http://localhost:3002`
 
-# Start the development server
-pnpm run dev
-```
-
-### 2. Frontend Setup
-
-```bash
-cd fe
-
-# Install dependencies
-pnpm install
-
-# Copy environment file
-cp .env.local.example .env.local
-
-# Edit .env.local:
-# - NEXT_PUBLIC_API_URL=http://localhost:3001
-
-# Start the development server
-pnpm run dev
-```
-
-### 3. Redis Setup
-
-For local development:
-```bash
-# Using Docker
-docker run -d -p 6379:6379 redis:alpine
-
-# Or install Redis locally
-# macOS: brew install redis && brew services start redis
-# Ubuntu: sudo apt install redis-server
-```
-
-For production, use a managed Redis service like:
-- Upstash (serverless, free tier available)
-- Redis Cloud
-- AWS ElastiCache
+*(To stop the background Redis container later, run `pnpm run redis:down`)*
 
 ## API Endpoints
 
