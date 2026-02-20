@@ -1,8 +1,14 @@
 import { Router, Request, Response } from "express";
 import { getRedisLockManager } from "../utils/redis-lock.js";
-import { verifyQRCode } from "../utils/qr-code.js";
+import { verifyQRCode, extractOrderId } from "../utils/qr-code.js";
 import { gateAuthMiddleware, rateLimitMiddleware } from "../middleware/auth.js";
-import { checkIn, validate, getStats as dbGetStats, logScan } from "../db/scan.js";
+import {
+  checkIn,
+  validate,
+  getStats as dbGetStats,
+  logScan,
+  getScanHistoryByOrderId,
+} from "../db/scan.js";
 import { getByOrderId } from "../db/orders.js";
 
 const router: Router = Router();
@@ -35,10 +41,36 @@ router.post(
       // Step 1: Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
+        // Try to extract orderId to provide better context
+        const extractedOrderId = extractOrderId(qrCode);
+        let data: any = null;
+        let enhancedError = qrResult.error || "Invalid QR code";
+        
+        if (extractedOrderId) {
+          try {
+            const orderInfo = await getByOrderId(extractedOrderId);
+            if (orderInfo) {
+              data = {
+                orderId: orderInfo.orderId,
+                quantity: orderInfo.quantity,
+                user: orderInfo.user ? { name: orderInfo.user.name, email: orderInfo.user.email } : null,
+                event: orderInfo.event ? { name: orderInfo.event.name, venue: orderInfo.event.venue } : null,
+                checkedIn: orderInfo.checkedIn,
+                checkedInAt: orderInfo.checkedInAt,
+              };
+              
+              const statusStr = orderInfo.checkedIn ? "Already Scanned" : "Not Scanned";
+              enhancedError = `Invalid QR Sig (${orderInfo.event?.name || "Unknown Event"} - ${statusStr})`;
+            }
+          } catch (_) { /* best-effort */ }
+        }
+
         res.status(400).json({
           success: false,
-          error: qrResult.error || "Invalid QR code",
+          error: enhancedError,
           code: "INVALID_QR",
+          data,
+          responseTime: Date.now() - startTime,
         });
         return;
       }
@@ -212,10 +244,35 @@ router.post(
       // Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
+        // Try to extract orderId to provide better context
+        const extractedOrderId = extractOrderId(qrCode);
+        let data: any = null;
+        let enhancedError = qrResult.error || "Invalid QR code";
+        
+        if (extractedOrderId) {
+          try {
+            const orderInfo = await getByOrderId(extractedOrderId);
+            if (orderInfo) {
+              data = {
+                orderId: orderInfo.orderId,
+                quantity: orderInfo.quantity,
+                user: orderInfo.user ? { name: orderInfo.user.name, email: orderInfo.user.email } : null,
+                event: orderInfo.event ? { name: orderInfo.event.name, venue: orderInfo.event.venue } : null,
+                checkedIn: orderInfo.checkedIn,
+                checkedInAt: orderInfo.checkedInAt,
+              };
+              
+              const statusStr = orderInfo.checkedIn ? "Already Scanned" : "Not Scanned";
+              enhancedError = `Invalid QR Sig (${orderInfo.event?.name || "Unknown Event"} - ${statusStr})`;
+            }
+          } catch (_) { /* best-effort */ }
+        }
+
         res.status(400).json({
           success: false,
-          error: qrResult.error || "Invalid QR code",
+          error: enhancedError,
           code: "INVALID_QR",
+          data,
         });
         return;
       }
@@ -256,6 +313,58 @@ router.post(
       res.status(500).json({
         success: false,
         error: "Failed to validate ticket",
+        code: "SERVER_ERROR",
+      });
+    }
+  }
+);
+
+router.post(
+  "/history",
+  gateAuthMiddleware,
+  rateLimitMiddleware(100),
+  async (req: Request, res: Response) => {
+    const { qrCode } = req.body;
+
+    if (!qrCode) {
+      res.status(400).json({
+        success: false,
+        error: "QR code is required",
+        code: "MISSING_QR_CODE",
+      });
+      return;
+    }
+
+    try {
+      const qrResult = verifyQRCode(qrCode);
+      if (!qrResult.valid || !qrResult.payload) {
+        res.status(400).json({
+          success: false,
+          error: qrResult.error || "Invalid QR code",
+          code: "INVALID_QR",
+        });
+        return;
+      }
+
+      const history = await getScanHistoryByOrderId(qrResult.payload.orderId);
+      if (!history) {
+        res.status(404).json({
+          success: false,
+          error: "Ticket not found",
+          code: "NOT_FOUND",
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: history,
+      });
+    } catch (error) {
+      console.error("History lookup error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch ticket history",
         code: "SERVER_ERROR",
       });
     }

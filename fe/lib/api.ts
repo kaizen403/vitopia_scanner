@@ -219,3 +219,49 @@ export async function getScanStats(eventId: string): Promise<ScanStats | null> {
   const response = await fetchApi<ScanStats>(`/api/scan/stats/${eventId}`);
   return response.data || null;
 }
+
+export interface TicketHistoryEvent {
+  id: string;
+  name: string;
+  accessToken: string | null;
+  category: string;
+}
+
+export interface TicketHistoryScanEntry {
+  scanResult: string;
+  scannedBy: string;
+  gate: string;
+  timestamp: number;
+  event: TicketHistoryEvent | null;
+}
+
+export interface TicketHistoryData {
+  orderId: string;
+  user: { name: string; email: string } | null;
+  purchasedEvents: TicketHistoryEvent[];
+  lastScannedAt: number | null;
+  scanHistory: TicketHistoryScanEntry[];
+}
+
+export interface TicketHistoryResponse {
+  success: boolean;
+  data?: TicketHistoryData;
+  error?: string;
+  code?: string;
+}
+
+export async function lookupTicketHistory(
+  qrCode: string,
+  gateId: string
+): Promise<TicketHistoryResponse> {
+  const response = await fetch(`${API_URL}/api/scan/history`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Gate-Id": gateId,
+    },
+    body: JSON.stringify({ qrCode }),
+  });
+
+  return response.json();
+}

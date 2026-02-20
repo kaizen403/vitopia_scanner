@@ -16,10 +16,19 @@ import {
   ChevronDown,
   ChevronUp,
   LayoutDashboard,
+  X,
 } from "lucide-react";
-import { verifyTicket, ScanResult, getEvents, Event } from "@/lib/api";
+import {
+  verifyTicket,
+  ScanResult,
+  getEvents,
+  Event,
+  lookupTicketHistory,
+  TicketHistoryData,
+} from "@/lib/api";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error" | "already_used";
+type HistoryLookupStatus = "idle" | "scanning" | "loading" | "success" | "error";
 
 interface ScanRecord {
   id: string;
@@ -88,10 +97,27 @@ function formatTime(timestamp?: number): string {
   });
 }
 
+function formatDateTime(timestamp?: number | null): string {
+  if (!timestamp) return "Never";
+  return new Date(timestamp).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatHistoryEvent(name: string, accessToken: string | null): string {
+  if (accessToken && EVENT_NAME_BY_TOKEN[accessToken]) {
+    return EVENT_NAME_BY_TOKEN[accessToken];
+  }
+  return formatEventName(name);
+}
+
 function getFailureMessage(result: ScanResult): string {
   if (result.code === "NOT_PAID") return "Not paid";
   if (result.code === "NOT_FOUND") return "Not found";
-  if (result.code === "INVALID_QR") return "Invalid QR";
+  if (result.code === "INVALID_QR") return result.error || "Invalid QR";
   if (result.code === "ALREADY_USED" && result.checkedInAt) {
     return `Scanned ${formatTime(result.checkedInAt)}`;
   }
@@ -126,25 +152,42 @@ export default function Home() {
   const detectorRef = useRef<InstanceType<NonNullable<typeof window.BarcodeDetector>> | null>(null);
   const rafIdRef = useRef<number>(0);
   const statusRef = useRef<ScanStatus>("idle");
+  const historyVideoRef = useRef<HTMLVideoElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyStream, setHistoryStream] = useState<MediaStream | null>(null);
+  const [historyScanning, setHistoryScanning] = useState(false);
+  const [historyStatus, setHistoryStatus] = useState<HistoryLookupStatus>("idle");
+  const [historyResult, setHistoryResult] = useState<TicketHistoryData | null>(null);
+  const [historyError, setHistoryError] = useState<string>("");
+  const historyDetectorRef =
+    useRef<InstanceType<NonNullable<typeof window.BarcodeDetector>> | null>(null);
+  const historyRafIdRef = useRef<number>(0);
+  const historyLastScannedRef = useRef<string>("");
+  const historyStatusRef = useRef<HistoryLookupStatus>("idle");
+  const resumeMainScanRef = useRef<boolean>(false);
 
   const verifiedScans = scanHistory.filter((s) => s.status === "success");
   const rejectedScans = scanHistory.filter((s) => s.status === "failed");
   const orderedEvents = useMemo(() => sortEventsForScanner(events), [events]);
 
-  useEffect(() => {
-    loadEvents();
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    const data = await getEvents();
+    setEvents(data);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
-  async function loadEvents() {
-    setLoading(true);
-    const data = await getEvents();
-    setEvents(data);
-    setLoading(false);
-  }
+  useEffect(() => {
+    historyStatusRef.current = historyStatus;
+  }, [historyStatus]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -176,12 +219,207 @@ export default function Home() {
     rafIdRef.current = 0;
 
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
       setStream(null);
     }
     setScanning(false);
     setStatus("idle");
   }, [stream]);
+
+  const startHistoryCamera = useCallback(async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          focusMode: "continuous",
+        } as MediaTrackConstraints,
+      });
+
+      if (historyVideoRef.current) {
+        historyVideoRef.current.srcObject = mediaStream;
+        await historyVideoRef.current.play();
+      }
+
+      setHistoryStream(mediaStream);
+      setHistoryScanning(true);
+      setHistoryStatus("scanning");
+      setHistoryError("");
+    } catch (error) {
+      console.error("Failed to start history camera:", error);
+      setHistoryStatus("error");
+      setHistoryError("Failed to access camera. Please ensure camera permissions are granted.");
+    }
+  }, []);
+
+  const stopHistoryCamera = useCallback(
+    (resetState: boolean = true) => {
+      cancelAnimationFrame(historyRafIdRef.current);
+      historyRafIdRef.current = 0;
+
+      if (historyStream) {
+        historyStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        setHistoryStream(null);
+      }
+
+      setHistoryScanning(false);
+
+      if (resetState) {
+        setHistoryStatus("idle");
+        historyLastScannedRef.current = "";
+      }
+    },
+    [historyStream]
+  );
+
+  const handleHistoryQRCodeDetected = useCallback(
+    async (qrCode: string) => {
+      setHistoryStatus("loading");
+      setHistoryError("");
+
+      try {
+        const result = await lookupTicketHistory(qrCode, gateId);
+        if (result.success && result.data) {
+          setHistoryResult(result.data);
+          setHistoryStatus("success");
+        } else {
+          setHistoryResult(null);
+          setHistoryStatus("error");
+          setHistoryError(result.error || "Unable to fetch ticket history.");
+        }
+      } catch (error) {
+        console.error("History lookup failed:", error);
+        setHistoryResult(null);
+        setHistoryStatus("error");
+        setHistoryError("Network error. Please try again.");
+      } finally {
+        stopHistoryCamera(false);
+      }
+    },
+    [stopHistoryCamera]
+  );
+
+  const openHistoryModal = useCallback(() => {
+    resumeMainScanRef.current = scanning;
+    if (scanning) {
+      stopCamera();
+    }
+
+    setHistoryOpen(true);
+    setHistoryResult(null);
+    setHistoryError("");
+    setHistoryStatus("idle");
+    historyLastScannedRef.current = "";
+    void startHistoryCamera();
+  }, [scanning, startHistoryCamera, stopCamera]);
+
+  const closeHistoryModal = useCallback(() => {
+    stopHistoryCamera(true);
+    setHistoryOpen(false);
+    setHistoryResult(null);
+    setHistoryError("");
+
+    if (resumeMainScanRef.current) {
+      resumeMainScanRef.current = false;
+      void startCamera();
+    }
+  }, [startCamera, stopHistoryCamera]);
+
+  const scanHistoryAgain = useCallback(() => {
+    setHistoryResult(null);
+    setHistoryError("");
+    setHistoryStatus("idle");
+    historyLastScannedRef.current = "";
+    void startHistoryCamera();
+  }, [startHistoryCamera]);
+
+  const playSound = useCallback((type: "success" | "error") => {
+    if (!soundEnabled) return;
+
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    if (type === "success") {
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } else {
+      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
+    }
+  }, [soundEnabled]);
+
+  const handleQRCodeDetected = useCallback(
+    async (qrCode: string) => {
+      setStatus("scanning");
+
+      try {
+        const result = await verifyTicket(qrCode, gateId, selectedEvent?._id || undefined);
+        setLastResult(result);
+
+        const record: ScanRecord = {
+          id: Date.now().toString(),
+          name: result.data?.user?.name || "Unknown",
+          email: result.data?.user?.email || "",
+          orderId: result.data?.orderId || "",
+          status: result.success ? "success" : "failed",
+          timestamp: Date.now(),
+          reason: getFailureMessage(result),
+          checkedInAt: result.checkedInAt,
+        };
+
+        setScanHistory((prev) => [record, ...prev]);
+
+        if (result.success) {
+          setStatus("success");
+          playSound("success");
+        } else if (result.code === "ALREADY_USED") {
+          setStatus("already_used");
+          playSound("error");
+        } else {
+          setStatus("error");
+          playSound("error");
+        }
+
+        if (scanTimeoutRef.current) {
+          clearTimeout(scanTimeoutRef.current);
+        }
+
+        if (result.success) {
+          scanTimeoutRef.current = setTimeout(() => {
+            setStatus("idle");
+            lastScannedRef.current = "";
+          }, 1500);
+        }
+      } catch (error) {
+        console.error("Verification error:", error);
+        setStatus("error");
+        setLastResult({
+          success: false,
+          error: "Network error. Please try again.",
+          code: "NETWORK_ERROR",
+        });
+        playSound("error");
+      }
+    },
+    [playSound, selectedEvent?._id]
+  );
 
   useEffect(() => {
     if (!scanning || !videoRef.current) return;
@@ -256,98 +494,105 @@ export default function Home() {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = 0;
     };
-  }, [scanning, selectedEvent, gateId]);
+  }, [scanning, handleQRCodeDetected]);
 
-  const handleQRCodeDetected = async (qrCode: string) => {
-    setStatus("scanning");
+  useEffect(() => {
+    if (!historyOpen || !historyScanning || !historyVideoRef.current) return;
 
-    try {
-      const result = await verifyTicket(qrCode, gateId, selectedEvent?._id || undefined);
-      setLastResult(result);
+    const video = historyVideoRef.current;
+    let isActive = true;
 
-      const record: ScanRecord = {
-        id: Date.now().toString(),
-        name: result.data?.user?.name || "Unknown",
-        email: result.data?.user?.email || "",
-        orderId: result.data?.orderId || "",
-        status: result.success ? "success" : "failed",
-        timestamp: Date.now(),
-        reason: getFailureMessage(result),
-        checkedInAt: result.checkedInAt,
+    const useNative = typeof window !== "undefined" && !!window.BarcodeDetector;
+
+    if (useNative) {
+      if (!historyDetectorRef.current) {
+        historyDetectorRef.current = new window.BarcodeDetector!({ formats: ["qr_code"] });
+      }
+
+      let lastFrameTime = 0;
+      const scanLoop = async (timestamp: number) => {
+        if (!isActive) return;
+        if (timestamp - lastFrameTime < 80) {
+          historyRafIdRef.current = requestAnimationFrame(scanLoop);
+          return;
+        }
+        lastFrameTime = timestamp;
+
+        try {
+          if (video.readyState >= 2 && historyStatusRef.current === "scanning") {
+            const barcodes = await historyDetectorRef.current!.detect(video);
+            if (isActive && barcodes.length > 0) {
+              const qrCode = barcodes[0].rawValue;
+              if (qrCode && qrCode !== historyLastScannedRef.current) {
+                historyLastScannedRef.current = qrCode;
+                void handleHistoryQRCodeDetected(qrCode);
+              }
+            }
+          }
+        } catch (_) {}
+
+        if (isActive) {
+          historyRafIdRef.current = requestAnimationFrame(scanLoop);
+        }
       };
 
-      setScanHistory((prev) => [record, ...prev]);
-
-      if (result.success) {
-        setStatus("success");
-        playSound("success");
-      } else if (result.code === "ALREADY_USED") {
-        setStatus("already_used");
-        playSound("error");
-      } else {
-        setStatus("error");
-        playSound("error");
-      }
-
-      if (scanTimeoutRef.current) {
-        clearTimeout(scanTimeoutRef.current);
-      }
-      scanTimeoutRef.current = setTimeout(() => {
-        setStatus("idle");
-        lastScannedRef.current = "";
-      }, 1500);
-    } catch (error) {
-      console.error("Verification error:", error);
-      setStatus("error");
-      setLastResult({
-        success: false,
-        error: "Network error. Please try again.",
-        code: "NETWORK_ERROR",
-      });
-      playSound("error");
-    }
-  };
-
-  const playSound = (type: "success" | "error") => {
-    if (!soundEnabled) return;
-
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    if (type === "success") {
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
+      historyRafIdRef.current = requestAnimationFrame(scanLoop);
     } else {
-      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.4);
+      let zxingReader: any = null;
+      let zxingControls: any = null;
+
+      const startZxing = async () => {
+        const { BrowserQRCodeReader } = await import("@zxing/browser");
+        if (!isActive) return;
+        zxingReader = new BrowserQRCodeReader();
+        zxingControls = await zxingReader.decodeFromVideoElement(video, (result: any) => {
+          if (!isActive || !result) return;
+          if (historyStatusRef.current !== "scanning") return;
+          const qrCode = result.getText();
+          if (qrCode !== historyLastScannedRef.current) {
+            historyLastScannedRef.current = qrCode;
+            void handleHistoryQRCodeDetected(qrCode);
+          }
+        });
+      };
+
+      startZxing().catch(console.error);
+
+      return () => {
+        isActive = false;
+        zxingControls?.stop();
+      };
     }
-  };
+
+    return () => {
+      isActive = false;
+      cancelAnimationFrame(historyRafIdRef.current);
+      historyRafIdRef.current = 0;
+    };
+  }, [historyOpen, historyScanning, handleHistoryQRCodeDetected]);
 
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = 0;
+      cancelAnimationFrame(historyRafIdRef.current);
+      historyRafIdRef.current = 0;
 
       if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+      }
+      if (historyStream) {
+        historyStream.getTracks().forEach((track) => {
+          track.stop();
+        });
       }
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [stream]);
+  }, [historyStream, stream]);
 
   const handleBackToEvents = () => {
     stopCamera();
@@ -391,6 +636,7 @@ export default function Home() {
             <div className="space-y-3">
               {orderedEvents.map((event) => (
                 <button
+                  type="button"
                   key={event._id}
                   onClick={() => setSelectedEvent(event)}
                   className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-4 text-left active:scale-[0.98] transition-all"
@@ -459,6 +705,7 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleBackToEvents}
               className="p-2 -ml-2 active:bg-[#1a1a1a] rounded-lg transition-colors"
             >
@@ -470,6 +717,7 @@ export default function Home() {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="p-2 active:bg-[#1a1a1a] rounded-lg transition-colors"
           >
@@ -482,6 +730,7 @@ export default function Home() {
         {/* Scan Stats - Clickable */}
         <div className="flex gap-3 mb-4">
           <button
+            type="button"
             onClick={() => { setShowVerified(!showVerified); setShowRejected(false); }}
             className={`flex-1 bg-[#0a0a0a] border rounded-xl p-3 text-center transition-all ${showVerified ? 'border-[#9AE600]' : 'border-[#1a1a1a]'}`}
           >
@@ -492,6 +741,7 @@ export default function Home() {
             <p className="text-xs text-[#99A1AF]">Verified</p>
           </button>
           <button
+            type="button"
             onClick={() => { setShowRejected(!showRejected); setShowVerified(false); }}
             className={`flex-1 bg-[#0a0a0a] border rounded-xl p-3 text-center transition-all ${showRejected ? 'border-red-500' : 'border-[#1a1a1a]'}`}
           >
@@ -502,6 +752,14 @@ export default function Home() {
             <p className="text-xs text-[#99A1AF]">Rejected</p>
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={openHistoryModal}
+          className="w-full mb-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm font-semibold text-[#9AE600] active:scale-[0.99] transition-all"
+        >
+          View History
+        </button>
 
         {/* Verified List */}
         {showVerified && verifiedScans.length > 0 && (
@@ -602,6 +860,20 @@ export default function Home() {
               {status === "error" && lastResult?.error && (
                 <p className="text-xs text-white/80">{lastResult.error}</p>
               )}
+
+              {status !== "success" && (
+                <button
+                  onClick={() => {
+                    setStatus("idle");
+                    lastScannedRef.current = "";
+                  }}
+                  type="button"
+                  className="mt-6 px-6 py-3 bg-black/20 hover:bg-black/30 text-white rounded-xl font-semibold flex items-center gap-2 backdrop-blur-sm transition-all active:scale-95"
+                >
+                  <X className="w-5 h-5" />
+                  Next
+                </button>
+              )}
             </div>
           )}
 
@@ -610,6 +882,7 @@ export default function Home() {
               <CameraOff className="w-12 h-12 text-[#99A1AF] mb-3" />
               <p className="text-sm text-[#99A1AF] mb-4">Camera not active</p>
               <button
+                type="button"
                 onClick={startCamera}
                 className="px-6 py-3 bg-[#9AE600] text-black rounded-xl font-semibold flex items-center gap-2 active:scale-95 transition-all"
               >
@@ -624,6 +897,7 @@ export default function Home() {
         {scanning && (
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={stopCamera}
               className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
@@ -631,6 +905,7 @@ export default function Home() {
               Stop
             </button>
             <button
+              type="button"
               onClick={() => {
                 setStatus("idle");
                 lastScannedRef.current = "";
@@ -642,6 +917,155 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {historyOpen && (
+        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#050505] border border-[#1a1a1a] rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">View History</p>
+                <p className="text-xs text-[#99A1AF]">Scan one QR to see past usage</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeHistoryModal}
+                className="p-2 rounded-lg active:bg-[#1a1a1a] transition-colors"
+              >
+                <X className="w-5 h-5 text-[#99A1AF]" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 max-h-[80vh] overflow-auto">
+              <div className="relative aspect-[4/3] bg-[#0a0a0a] rounded-xl overflow-hidden border border-[#1a1a1a]">
+                <video
+                  ref={historyVideoRef}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  playsInline
+                  muted
+                />
+
+                {historyScanning && historyStatus === "scanning" && (
+                  <div className="scanner-overlay">
+                    <div className="scanner-frame relative">
+                      <div className="scanner-line" />
+                    </div>
+                  </div>
+                )}
+
+                {historyStatus === "loading" && (
+                  <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
+                    <RefreshCw className="w-8 h-8 text-[#9AE600] animate-spin mb-2" />
+                    <p className="text-sm text-white">Fetching ticket history...</p>
+                  </div>
+                )}
+
+                {!historyScanning && historyStatus === "idle" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]">
+                    <CameraOff className="w-10 h-10 text-[#99A1AF] mb-2" />
+                    <p className="text-sm text-[#99A1AF] mb-3">History scanner is not active</p>
+                    <button
+                      type="button"
+                      onClick={scanHistoryAgain}
+                      className="px-5 py-2.5 bg-[#9AE600] text-black rounded-lg text-sm font-semibold"
+                    >
+                      Start Scanner
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {historyStatus === "error" && (
+                <div className="bg-[#0a0a0a] border border-red-500/40 rounded-xl p-3">
+                  <p className="text-sm text-red-400">{historyError || "Unable to fetch history."}</p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={scanHistoryAgain}
+                      className="flex-1 py-2 text-sm rounded-lg bg-[#1a1a1a] text-white"
+                    >
+                      Scan Again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeHistoryModal}
+                      className="flex-1 py-2 text-sm rounded-lg bg-[#9AE600] text-black font-semibold"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {historyStatus === "success" && historyResult && (
+                <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-3 space-y-3">
+                  <div>
+                    <p className="text-xs text-[#99A1AF]">Attendee</p>
+                    <p className="text-sm text-white font-semibold">{historyResult.user?.name || "Unknown"}</p>
+                    <p className="text-xs text-[#99A1AF]">{historyResult.user?.email || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#99A1AF]">Order ID</p>
+                    <p className="text-sm text-white">{historyResult.orderId}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#99A1AF]">Last Scanned</p>
+                    <p className="text-sm text-white">{formatDateTime(historyResult.lastScannedAt)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#99A1AF] mb-1">Events Bought</p>
+                    <div className="flex flex-wrap gap-2">
+                      {historyResult.purchasedEvents.length > 0 ? (
+                        historyResult.purchasedEvents.map((event) => (
+                          <span
+                            key={event.id}
+                            className="text-xs px-2 py-1 rounded-full bg-[#141414] border border-[#1f1f1f] text-[#d5d5d5]"
+                          >
+                            {formatHistoryEvent(event.name, event.accessToken)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-[#99A1AF]">No event data</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#99A1AF] mb-1">Scan Timeline</p>
+                    <div className="space-y-2 max-h-36 overflow-auto pr-1">
+                      {historyResult.scanHistory.length > 0 ? (
+                        historyResult.scanHistory.map((entry, index) => (
+                          <div key={`${entry.timestamp}-${index}`} className="text-xs border border-[#1a1a1a] rounded-lg p-2">
+                            <p className="text-white">
+                              {entry.event
+                                ? formatHistoryEvent(entry.event.name, entry.event.accessToken)
+                                : "Unknown Event"}
+                            </p>
+                            <p className="text-[#99A1AF]">{formatDateTime(entry.timestamp)}</p>
+                            <p className="text-[#99A1AF]">{entry.scanResult.replaceAll("_", " ")}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-[#99A1AF]">No scans yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={scanHistoryAgain}
+                    className="w-full py-2.5 rounded-lg bg-[#9AE600] text-black text-sm font-semibold"
+                  >
+                    Scan Another
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

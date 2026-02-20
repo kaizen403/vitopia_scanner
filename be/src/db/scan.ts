@@ -117,6 +117,29 @@ export interface LogScanResult {
   persisted: boolean;
 }
 
+export interface PurchasedEventSummary {
+  id: string;
+  name: string;
+  accessToken: string | null;
+  category: string;
+}
+
+export interface ScanHistoryEntry {
+  scanResult: ScanResultTaxonomy;
+  scannedBy: string;
+  gate: string;
+  timestamp: number;
+  event: PurchasedEventSummary | null;
+}
+
+export interface ScanHistoryResult {
+  orderId: string;
+  user: ScanUserContext | null;
+  purchasedEvents: PurchasedEventSummary[];
+  lastScannedAt: number | null;
+  scanHistory: ScanHistoryEntry[];
+}
+
 export interface MappedScanStatsEvent {
   _id: string;
   _creationTime: number;
@@ -469,6 +492,92 @@ export async function logScan(input: LogScanInput): Promise<LogScanResult> {
   });
 
   return { persisted: true };
+}
+
+export async function getScanHistoryByOrderId(
+  orderId: string
+): Promise<ScanHistoryResult | null> {
+  const order = await prisma.order.findFirst({
+    where: { orderId },
+    include: {
+      user: true,
+      event: true,
+    },
+  });
+
+  if (!order) {
+    return null;
+  }
+
+  const accessTokens = Array.from(new Set(order.accessTokens.filter(Boolean)));
+  const purchasedEventWhere: Prisma.EventWhereInput[] = [{ id: order.eventId }];
+
+  if (accessTokens.length > 0) {
+    purchasedEventWhere.push({ accessToken: { in: accessTokens } });
+  }
+
+  const [purchasedEventsRaw, logs] = await Promise.all([
+    prisma.event.findMany({ where: { OR: purchasedEventWhere } }),
+    prisma.scanLog.findMany({
+      where: { orderId },
+      orderBy: { timestamp: "desc" },
+      include: { event: true },
+    }),
+  ]);
+
+  const purchasedEventsById = new Map<string, PurchasedEventSummary>();
+  for (const event of purchasedEventsRaw) {
+    purchasedEventsById.set(event.id, {
+      id: toExternalId(event.id, event.convexId),
+      name: event.name,
+      accessToken: event.accessToken,
+      category: event.category,
+    });
+  }
+
+  const purchasedEvents = Array.from(purchasedEventsById.values()).sort((a, b) => {
+    const eventA = purchasedEventsRaw.find((event) => toExternalId(event.id, event.convexId) === a.id);
+    const eventB = purchasedEventsRaw.find((event) => toExternalId(event.id, event.convexId) === b.id);
+
+    const rankA = eventA?.scanOrder ?? Number.MAX_SAFE_INTEGER;
+    const rankB = eventB?.scanOrder ?? Number.MAX_SAFE_INTEGER;
+
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+
+    if ((eventA?.date ?? 0) !== (eventB?.date ?? 0)) {
+      return Number(eventA?.date ?? 0) - Number(eventB?.date ?? 0);
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+
+  return {
+    orderId: order.orderId,
+    user: order.user
+      ? {
+          name: order.user.name,
+          email: order.user.email,
+        }
+      : null,
+    purchasedEvents,
+    lastScannedAt: logs.length > 0 ? Number(logs[0].timestamp) : null,
+    scanHistory: logs.map((log) => ({
+      scanResult: log.scanResult,
+      scannedBy: log.scannedBy,
+      gate: log.gate,
+      timestamp: Number(log.timestamp),
+      event: log.event
+        ? {
+            id: toExternalId(log.event.id, log.event.convexId),
+            name: log.event.name,
+            accessToken: log.event.accessToken,
+            category: log.event.category,
+          }
+        : null,
+    })),
+  };
 }
 
 export async function getStats(eventId: string): Promise<ScanStats | null> {

@@ -1,12 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    turbo: {
-      resolveAlias: {
-        "turbopack.root": "/home/kaizen/opus-fest",
-      },
-    },
+  turbopack: {
+    root: "/home/kaizen/opus-fest",
   },
   images: {
     remotePatterns: [
