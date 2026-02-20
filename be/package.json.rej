@@ -1,0 +1,10 @@
+--- package.json
++++ package.json
+@@ -10,6 +10,7 @@
+     "db:migrate:status": "prisma migrate status",
+     "db:migrate:deploy": "prisma migrate deploy",
++    "db:seed": "tsx scripts/seed.ts",
+     "build": "tsc",
+ 
+ 
+ 

@@ -1,0 +1,206 @@
+import { prisma } from "../src/db/prisma.ts";
+import jwt from "jsonwebtoken";
+import QRCode from "qrcode";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const QR_DIR = path.resolve(__dirname, "../../QRs");
+
+const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key_change_in_production";
+
+function generateQRToken(data: { orderId: string }): string {
+  return jwt.sign({ orderId: data.orderId }, JWT_SECRET, {
+    algorithm: "HS256",
+    noTimestamp: true,
+  });
+}
+
+const firstNames = [
+  "Aarav", "Aditi", "Akash", "Akhila", "Ameya", "Ananya", "Arjun", "Bhavya",
+  "Chaitra", "Dev", "Divya", "Eshan", "Gauri", "Harsha", "Ishita", "Karthik",
+  "Kavya", "Lakshay", "Meera", "Nikhil", "Pranav", "Priya", "Rahul", "Riya",
+  "Saanvi", "Sai", "Sakshi", "Sameer", "Shreya", "Tanvi", "Varun", "Ved",
+  "Vikram", "Yash",
+];
+
+const lastNames = [
+  "Agarwal", "Bhat", "Chopra", "Das", "Desai", "Gupta", "Iyer", "Jain",
+  "Kapoor", "Kulkarni", "Menon", "Mishra", "Nair", "Patel", "Rao", "Reddy",
+  "Saxena", "Sharma", "Singh", "Verma",
+];
+
+const randomFrom = (list: string[]) => list[Math.floor(Math.random() * list.length)];
+const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const generateOrderId = () => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `ORD-${timestamp}-${random}`.toUpperCase();
+};
+
+async function main() {
+  const db = prisma as any;
+  
+  console.log("=== Step 1: Clearing all data ===");
+  await db.scanLog.deleteMany({});
+  await db.order.deleteMany({});
+  await db.gate.deleteMany({});
+  await db.event.deleteMany({});
+  await db.user.deleteMany({});
+
+  console.log("\n=== Step 2: Seeding fresh data ===");
+  
+  const now = BigInt(Date.now());
+
+  // Seed admin user
+  const admin = await db.user.create({
+    data: {
+      name: "Admin User",
+      email: "admin@vitapstudent.ac.in",
+      college: "VIT-AP",
+      createdAt: now,
+    }
+  });
+  
+  // Seed scanner user
+  const scanner = await db.user.create({
+    data: {
+      name: "Scanner Volunteer",
+      email: "scanner@vitapstudent.ac.in",
+      college: "VIT-AP",
+      createdAt: now,
+    }
+  });
+
+  const ensureEvent = async (name: string, description: string, dateOffsetDays: number) => {
+    return db.event.create({
+      data: {
+        name,
+        description,
+        date: BigInt(Date.now() + dateOffsetDays * 24 * 60 * 60 * 1000),
+        venue: "VIT-AP Campus",
+        capacity: 500,
+        price: 0,
+        isActive: true,
+        createdAt: now,
+      },
+    });
+  };
+
+  const day1Event = await ensureEvent("Vitopia2026-Day1", "VITopia 2026 - Day 1", 1);
+  const day2Event = await ensureEvent("Vitopia2026-Day2", "VITopia 2026 - Day 2", 2);
+
+  // Create default gate and assign to scanner
+  const gate = await db.gate.create({
+    data: {
+      name: "Main Entrance Day 1",
+      eventId: day1Event.id,
+      gateId: "gate-a",
+      isActive: true,
+      createdAt: now,
+    },
+  });
+
+  const usedEmails = new Set();
+  const day1Orders = [];
+
+  const createUserAndOrder = async (event: any, count: number) => {
+    let created = 0;
+
+    while (created < count) {
+      const first = randomFrom(firstNames);
+      const last = randomFrom(lastNames);
+      const name = `${first} ${last}`;
+      const nameToken = `${first}${last}`.toLowerCase();
+      const year = randomInt(20, 25);
+      const roll = randomInt(1000, 9999);
+      const email = `${year}bce${roll}.${nameToken}@vitapstudent.ac.in`;
+
+      if (usedEmails.has(email)) continue;
+      usedEmails.add(email);
+
+      let user = await db.user.findFirst({ where: { email } });
+      if (!user) {
+        user = await db.user.create({
+          data: { email, name, college: "VIT-AP", createdAt: now },
+        });
+      }
+
+      const orderId = generateOrderId();
+      const order = await db.order.create({
+        data: {
+          orderId,
+          userId: user.id,
+          eventId: event.id,
+          quantity: 1,
+          totalAmount: event.price,
+          paymentStatus: "paid",
+          checkedIn: false,
+          updatedAt: now,
+          createdAt: now,
+        },
+      });
+
+      if (event.id === day1Event.id) {
+        day1Orders.push(order);
+      }
+      
+      created++;
+    }
+  };
+
+  await createUserAndOrder(day1Event, 50);
+  await createUserAndOrder(day2Event, 30);
+  
+  console.log(`Seeded: 50 Day1 orders, 30 Day2 orders`);
+  console.log(`\n--- Credentials ---`);
+  console.log(`Admin user: ${admin.email}`);
+  console.log(`Scanner User: ${scanner.email}`);
+  console.log(`Scanner Password: (Use your regular site auth or PIN depending on your route auth setup)`);
+  console.log(`Gate Code: (For Event: ${day1Event.name})`);
+  console.log(`Dashboard PIN: 260226 (or process.env.DASHBOARD_PIN)`);
+
+  console.log("\n=== Step 3: Generating QR codes ===");
+
+  if (fs.existsSync(QR_DIR)) {
+    fs.rmSync(QR_DIR, { recursive: true });
+  }
+  fs.mkdirSync(path.join(QR_DIR, "unscanned"), { recursive: true });
+
+  let generated = 0;
+  for (const order of day1Orders) {
+    const token = generateQRToken({ orderId: order.orderId });
+
+    const verified = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as any;
+    if (verified.orderId !== order.orderId) {
+      console.error(`VERIFICATION FAILED for ${order.orderId}`);
+      continue;
+    }
+
+    const filename = `${order.orderId}.png`;
+    const filepath = path.join(QR_DIR, "unscanned", filename);
+
+    await QRCode.toFile(filepath, token, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 400,
+      color: { dark: "#000000", light: "#ffffff" },
+    });
+
+    generated++;
+  }
+
+  console.log(`Generated ${generated} QR codes in ${QR_DIR}/unscanned/`);
+  console.log("\n=== Done! ===");
+}
+
+main()
+  .catch((err) => {
+    console.error("Script failed:", err);
+    process.exit(1);
+  })
+  .finally(async () => {
+    process.exit(0);
+  });

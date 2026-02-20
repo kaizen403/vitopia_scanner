@@ -4,7 +4,7 @@
   "private": true,
   "description": "Fest Entry Verification System - Monorepo",
   "scripts": {
-    "dev": "pnpm --filter fe dev & pnpm --filter be dev:server",
+    "dev": "pnpm --filter fe dev & pnpm --filter be dev",
     "dev:fe": "pnpm --filter fe dev",
     "dev:be": "pnpm --filter be dev:server",
     "dev:convex": "pnpm --filter be dev:convex",
