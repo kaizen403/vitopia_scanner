@@ -43,6 +43,9 @@ export interface Event {
   capacity: number;
   price: number;
   isActive: boolean;
+  accessToken?: string | null;
+  category?: string;
+  scanOrder?: number;
   createdAt: number;
 }
 
@@ -151,8 +154,18 @@ export interface ScanResult {
   data?: {
     orderId: string;
     quantity: number;
-    user: { name: string; email: string };
-    event: { name: string; venue: string };
+    receiptId?: string | null;
+    invoiceNumber?: string | null;
+    registrationId?: string | null;
+    productMeta?: string | null;
+    accessTokens?: string[];
+    tshirt?: {
+      eligible: boolean;
+      size: string | null;
+      color: string | null;
+    };
+    user?: { name: string; email: string } | null;
+    event?: { name: string; venue: string } | null;
   };
   checkedInAt?: number;
   checkedInBy?: string;
