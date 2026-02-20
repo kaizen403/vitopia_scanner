@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getRedisLockManager } from "../utils/redis-lock.js";
-import { verifyQRCode, extractOrderId } from "../utils/qr-code.js";
+import { verifyQRCode } from "../utils/qr-code.js";
 import { gateAuthMiddleware, rateLimitMiddleware } from "../middleware/auth.js";
 import {
   checkIn,
@@ -38,43 +38,16 @@ router.post(
     const lockManager = getRedisLockManager();
 
     try {
-      // Step 1: Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
-        // Try to extract orderId to provide better context
-        const extractedOrderId = extractOrderId(qrCode);
-        let data: any = null;
-        let enhancedError = qrResult.error || "Invalid QR code";
-        
-        if (extractedOrderId) {
-          try {
-            const orderInfo = await getByOrderId(extractedOrderId);
-            if (orderInfo) {
-              data = {
-                orderId: orderInfo.orderId,
-                quantity: orderInfo.quantity,
-                user: orderInfo.user ? { name: orderInfo.user.name, email: orderInfo.user.email } : null,
-                event: orderInfo.event ? { name: orderInfo.event.name, venue: orderInfo.event.venue } : null,
-                checkedIn: orderInfo.checkedIn,
-                checkedInAt: orderInfo.checkedInAt,
-              };
-              
-              const statusStr = orderInfo.checkedIn ? "\n(Already Scanned)" : "";
-              enhancedError = `Ticket is for:\n${orderInfo.event?.name || "Unknown Event"}${statusStr}`;
-            }
-          } catch (_) { /* best-effort */ }
-        }
-
         res.status(400).json({
           success: false,
-          error: enhancedError,
+          error: qrResult.error || "Invalid QR code",
           code: "INVALID_QR",
-          data,
           responseTime: Date.now() - startTime,
         });
         return;
       }
-
       const { orderId } = qrResult.payload;
 
       // Step 2: Check Redis cache for fast rejection
@@ -241,45 +214,17 @@ router.post(
     }
 
     try {
-      // Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
-        // Try to extract orderId to provide better context
-        const extractedOrderId = extractOrderId(qrCode);
-        let data: any = null;
-        let enhancedError = qrResult.error || "Invalid QR code";
-        
-        if (extractedOrderId) {
-          try {
-            const orderInfo = await getByOrderId(extractedOrderId);
-            if (orderInfo) {
-              data = {
-                orderId: orderInfo.orderId,
-                quantity: orderInfo.quantity,
-                user: orderInfo.user ? { name: orderInfo.user.name, email: orderInfo.user.email } : null,
-                event: orderInfo.event ? { name: orderInfo.event.name, venue: orderInfo.event.venue } : null,
-                checkedIn: orderInfo.checkedIn,
-                checkedInAt: orderInfo.checkedInAt,
-              };
-              
-              const statusStr = orderInfo.checkedIn ? "\n(Already Scanned)" : "";
-              enhancedError = `Ticket is for:\n${orderInfo.event?.name || "Unknown Event"}${statusStr}`;
-            }
-          } catch (_) { /* best-effort */ }
-        }
-
         res.status(400).json({
           success: false,
-          error: enhancedError,
+          error: qrResult.error || "Invalid QR code",
           code: "INVALID_QR",
-          data,
         });
         return;
       }
-
       const { orderId } = qrResult.payload;
 
-      // Check with Postgres
       const result = await validate(orderId, eventId);
 
       if (result.valid) {
@@ -345,8 +290,9 @@ router.post(
         });
         return;
       }
+      const { orderId } = qrResult.payload;
 
-      const history = await getScanHistoryByOrderId(qrResult.payload.orderId);
+      const history = await getScanHistoryByOrderId(orderId);
       if (!history) {
         res.status(404).json({
           success: false,

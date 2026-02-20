@@ -10,12 +10,13 @@ const router: Router = Router();
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { search, paymentStatus, eventId, page, limit } = req.query;
+    const { search, paymentStatus, eventId, mailed, page, limit } = req.query;
     
     const result = await ordersRepo.listOrders({
       search: search as string,
       paymentStatus: paymentStatus as string,
       eventId: eventId as string,
+      mailed: mailed as string,
       page: page ? parseInt(page as string) : 1,
       limit: limit ? parseInt(limit as string) : 50,
     });
@@ -33,7 +34,7 @@ router.get("/", async (req: Request, res: Response) => {
  * Create a new order
  */
 router.post("/", async (req: Request, res: Response) => {
-  const { userId, eventId, quantity } = req.body;
+  const { userId, eventId, quantity, registrationId, accessTokens } = req.body;
 
   if (!userId || !eventId || !quantity) {
     res.status(400).json({
@@ -48,6 +49,8 @@ router.post("/", async (req: Request, res: Response) => {
       userId,
       eventId,
       quantity,
+      registrationId,
+      accessTokens,
     });
 
     res.status(201).json({

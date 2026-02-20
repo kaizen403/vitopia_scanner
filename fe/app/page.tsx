@@ -400,13 +400,6 @@ export default function Home() {
         if (scanTimeoutRef.current) {
           clearTimeout(scanTimeoutRef.current);
         }
-
-        if (result.success) {
-          scanTimeoutRef.current = setTimeout(() => {
-            setStatus("idle");
-            lastScannedRef.current = "";
-          }, 1500);
-        }
       } catch (error) {
         console.error("Verification error:", error);
         setStatus("error");
@@ -612,9 +605,9 @@ export default function Home() {
             <Image
               src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
               alt="VITopia"
-              width={160}
-              height={50}
-              className="h-10 w-auto"
+              width={240}
+              height={75}
+              className="h-16 w-auto"
               unoptimized
             />
           </div>
@@ -622,7 +615,7 @@ export default function Home() {
 
         <main className="flex-1 max-w-md mx-auto w-full px-4 py-6 flex flex-col">
           <div className="text-center mb-6">
-            <h1 className="text-xl font-bold text-white mb-1">Entry Scanner</h1>
+            <h1 className="text-2xl font-bold text-white mb-1">Entry Scanner</h1>
             <p className="text-sm text-[#99A1AF]">Select an event to start scanning</p>
           </div>
 
@@ -702,7 +695,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <header className="border-b border-[#1a1a1a] bg-black/90 backdrop-blur-sm sticky top-0 z-50 safe-top">
-        <div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -728,7 +721,7 @@ export default function Home() {
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 py-4 flex flex-col overflow-auto">
         {/* Scan Stats - Clickable */}
-        <div className="flex gap-3 mb-4">
+        <div className="flex gap-3 mb-6">
           <button
             type="button"
             onClick={() => { setShowVerified(!showVerified); setShowRejected(false); }}
@@ -756,14 +749,14 @@ export default function Home() {
         <button
           type="button"
           onClick={openHistoryModal}
-          className="w-full mb-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm font-semibold text-[#9AE600] active:scale-[0.99] transition-all"
+          className="w-full mb-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm font-semibold text-[#9AE600] active:scale-[0.99] transition-all"
         >
           View History
         </button>
 
         {/* Verified List */}
         {showVerified && verifiedScans.length > 0 && (
-          <div className="mb-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-3 max-h-48 overflow-auto">
+          <div className="mb-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-3 max-h-48 overflow-auto">
             <p className="text-xs text-[#99A1AF] mb-2">Verified Entries</p>
             <div className="space-y-2">
               {verifiedScans.map((scan) => (
@@ -773,6 +766,7 @@ export default function Home() {
                     <p className="text-white truncate">{scan.name}</p>
                     <p className="text-[10px] text-[#99A1AF] truncate">{scan.orderId}</p>
                   </div>
+                  <p className="text-[10px] text-[#99A1AF] flex-shrink-0">{formatTime(scan.timestamp)}</p>
                 </div>
               ))}
             </div>
@@ -781,7 +775,7 @@ export default function Home() {
 
         {/* Rejected List */}
         {showRejected && rejectedScans.length > 0 && (
-          <div className="mb-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-3 max-h-48 overflow-auto">
+          <div className="mb-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-3 max-h-48 overflow-auto">
             <p className="text-xs text-[#99A1AF] mb-2">Rejected Entries</p>
             <div className="space-y-2">
               {rejectedScans.map((scan) => (
@@ -790,9 +784,7 @@ export default function Home() {
                   <div className="flex-1 min-w-0">
                     <p className="text-white truncate">{scan.name}</p>
                     <p className="text-[10px] text-[#99A1AF] truncate">{scan.reason}</p>
-                    {scan.checkedInAt && (
-                      <p className="text-[10px] text-[#99A1AF]">Last scanned {formatTime(scan.checkedInAt)}</p>
-                    )}
+                    <p className="text-[10px] text-[#99A1AF]">Rejected {formatTime(scan.timestamp)}</p>
                   </div>
                 </div>
               ))}
@@ -801,7 +793,7 @@ export default function Home() {
         )}
 
         {/* Camera View */}
-        <div className="relative aspect-[4/3] bg-[#0a0a0a] rounded-2xl overflow-hidden mb-4 border border-[#1a1a1a]">
+        <div className="relative aspect-[4/3] bg-[#0a0a0a] rounded-2xl overflow-hidden mb-6 border border-[#1a1a1a]">
           <video
             ref={videoRef}
             className="absolute inset-0 w-full h-full object-cover"
@@ -819,68 +811,131 @@ export default function Home() {
           )}
 
           {status !== "idle" && status !== "scanning" && (
-            <div
-              className={`absolute inset-0 flex flex-col items-center justify-center ${
-                status === "success"
-                  ? "bg-[#9AE600]/90"
-                  : status === "already_used"
-                  ? "bg-yellow-500/90"
-                  : "bg-red-500/90"
-              }`}
-            >
-              {status === "success" ? (
-                <CheckCircle className="w-16 h-16 mb-3 text-black" />
-              ) : status === "already_used" ? (
-                <AlertCircle className="w-16 h-16 mb-3 text-black" />
-              ) : (
-                <XCircle className="w-16 h-16 mb-3 text-white" />
-              )}
-              <h2 className={`text-xl font-bold mb-1 ${status === "success" || status === "already_used" ? "text-black" : "text-white"}`}>
-                {status === "success"
-                  ? "ENTRY ALLOWED"
-                  : status === "already_used"
-                  ? "ALREADY SCANNED"
-                  : "ENTRY DENIED"}
-              </h2>
-              {lastResult?.data && (
-                <p className={`text-sm ${status === "success" || status === "already_used" ? "text-black/70" : "text-white/70"}`}>
-                  {lastResult.data.user?.name ?? "Unknown attendee"}
-                </p>
-              )}
-              {lastResult?.data?.tshirt?.eligible && (
-                <p className={`text-xs ${status === "success" || status === "already_used" ? "text-black/70" : "text-white/70"}`}>
-                  T-Shirt: {lastResult.data.tshirt.size || "NA"} / {lastResult.data.tshirt.color || "NA"}
-                </p>
-              )}
-              {status === "already_used" && lastResult?.checkedInAt && (
-                <p className={`text-xs ${status === "already_used" ? "text-black/70" : "text-white/70"}`}>
-                  Last scanned {formatTime(lastResult.checkedInAt)}
-                </p>
-              )}
-              {status === "error" && lastResult?.error && (
-                <p className="text-xs text-white/80">{lastResult.error}</p>
-              )}
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-lg">
+              <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl w-[calc(100%-2rem)] max-w-sm max-h-[92%] shadow-2xl overflow-hidden flex flex-col">
+                {/* Top accent bar */}
+                <div className={`h-1 w-full ${
+                  status === "success"
+                    ? "bg-[#9AE600]"
+                    : status === "already_used"
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                }`} />
 
-              {status !== "success" && (
-                <button
-                  onClick={() => {
-                    setStatus("idle");
-                    lastScannedRef.current = "";
-                  }}
-                  type="button"
-                  className="mt-6 px-6 py-3 bg-black/20 hover:bg-black/30 text-white rounded-xl font-semibold flex items-center gap-2 backdrop-blur-sm transition-all active:scale-95"
-                >
-                  <X className="w-5 h-5" />
-                  Next
-                </button>
-              )}
+                <div className="flex flex-col items-center text-center px-6 pt-8 pb-6 overflow-y-auto">
+                  {/* Status Icon */}
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-5 ${
+                    status === "success"
+                      ? "bg-[#9AE600]/15 ring-2 ring-[#9AE600]/30"
+                      : status === "already_used"
+                      ? "bg-yellow-500/15 ring-2 ring-yellow-500/30"
+                      : "bg-red-500/15 ring-2 ring-red-500/30"
+                  }`}>
+                    {status === "success" ? (
+                      <CheckCircle className="w-8 h-8 text-[#9AE600]" />
+                    ) : status === "already_used" ? (
+                      <AlertCircle className="w-10 h-10 text-yellow-500" />
+                    ) : (
+                      <XCircle className="w-10 h-10 text-red-500" />
+                    )}
+                  </div>
+
+                  {/* Status Title */}
+                  <h2 className={`text-2xl font-bold tracking-wide mb-6 ${
+                    status === "success"
+                      ? "text-[#9AE600]"
+                      : status === "already_used"
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                  }`}>
+                    {status === "success"
+                      ? "ENTRY ALLOWED"
+                      : status === "already_used"
+                      ? "ALREADY SCANNED"
+                      : "ENTRY DENIED"}
+                  </h2>
+
+                  {/* Info Cards */}
+                  <div className="w-full space-y-3">
+                    {status === "already_used" && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-left">
+                        <p className="text-[11px] text-yellow-500/70 uppercase tracking-wider mb-0.5">Previously Scanned</p>
+                        <p className="text-sm text-yellow-400 font-medium">
+                          {formatTime(
+                            lastResult?.checkedInAt ??
+                              scanHistory.find(
+                                (entry) =>
+                                  entry.orderId === (lastResult?.data?.orderId ?? "") &&
+                                  entry.status === "success"
+                              )?.timestamp ??
+                              Date.now()
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Attendee Name */}
+                    {lastResult?.data && (
+                      <div className="bg-white/5 rounded-xl px-4 py-3 text-left">
+                        <p className="text-[11px] text-[#6b7280] uppercase tracking-wider mb-0.5">Attendee</p>
+                        <p className="text-[15px] text-white font-semibold">
+                          {lastResult.data.user?.name ?? "Unknown attendee"}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Event Info */}
+                    {lastResult?.data?.event && (
+                      <div className="bg-white/5 rounded-xl px-4 py-3 text-left">
+                        <p className="text-[11px] text-[#6b7280] uppercase tracking-wider mb-0.5">Event</p>
+                        <p className="text-sm text-white font-medium">
+                          {getEventDisplayName(lastResult.data.event as Event)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* T-Shirt Info — only for T-Shirt Distribution event */}
+                    {selectedEvent?.accessToken === "TSHIRT" && lastResult?.data?.tshirt?.eligible && (
+                      <div className="bg-white/5 rounded-xl px-4 py-3 text-left">
+                        <p className="text-[11px] text-[#6b7280] uppercase tracking-wider mb-0.5">T-Shirt</p>
+                        <p className="text-sm text-white font-medium">
+                          {lastResult.data.tshirt.size || "N/A"} / {lastResult.data.tshirt.color || "N/A"}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Error Message */}
+                    {status === "error" && lastResult?.error && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-left">
+                        <p className="text-[11px] text-red-500/70 uppercase tracking-wider mb-0.5">Reason</p>
+                        <p className="text-sm text-red-400">{lastResult.error}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Next Button */}
+                <div className="px-5 py-4 border-t border-[#1f1f1f]">
+                  <button
+                    onClick={() => {
+                      setStatus("idle");
+                      lastScannedRef.current = "";
+                    }}
+                    type="button"
+                    className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+                  >
+                    <X className="w-4 h-4" />
+                    Next Scan
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
           {!scanning && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]">
               <CameraOff className="w-12 h-12 text-[#99A1AF] mb-3" />
-              <p className="text-sm text-[#99A1AF] mb-4">Camera not active</p>
+              <p className="text-sm text-[#99A1AF] mb-6">Camera not active</p>
               <button
                 type="button"
                 onClick={startCamera}
@@ -899,7 +954,7 @@ export default function Home() {
             <button
               type="button"
               onClick={stopCamera}
-              className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
+              className="flex-1 py-3 bg-red-900 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
               <CameraOff className="w-5 h-5" />
               Stop

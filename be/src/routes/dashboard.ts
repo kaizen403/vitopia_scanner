@@ -63,7 +63,7 @@ router.post("/auth", (req: Request, res: Response) => {
   activeTokens.add(token);
   setTimeout(() => activeTokens.delete(token), TOKEN_TTL_MS);
 
-  res.json({ success: true, token });
+  res.json({ success: true, data: token });
 });
 
 const AUTH_SECRET = process.env.AUTH_SECRET || "opus-fest-auth-secret-2026";

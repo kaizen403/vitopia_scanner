@@ -11,6 +11,7 @@ import eventsRoutes from "./routes/events.js";
 import ordersRoutes from "./routes/orders.js";
 import usersRoutes from "./routes/users.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import mailRoutes from "./routes/mail.js";
 import authRoutes from "./routes/auth.js";
 import { errorHandler } from "./middleware/auth.js";
 import { getDatabaseReadiness } from "./db/readiness.js";
@@ -30,6 +31,7 @@ export const createApp = ({
   const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:3002",
     "http://157.245.97.218",
     "https://157.245.97.218",
     "https://scanner.vitap.in",
@@ -71,6 +73,7 @@ export const createApp = ({
   app.use("/api/users", usersRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/dashboard", dashboardRoutes);
+  app.use("/api/mail", mailRoutes);
 
   // Error handling
   app.use(errorHandler);

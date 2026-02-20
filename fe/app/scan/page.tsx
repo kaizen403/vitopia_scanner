@@ -38,6 +38,11 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
 
 function getEventDisplayName(event: Event): string {
   const token = event.accessToken ?? "";
+  if (event.name === "Vitopia2026-Day1") return "Vitopia Day 1";
+  if (event.name === "Vitopia2026-Day2") return "Vitopia Day 2";
+  if (event.name === "Vitopia2026-Day3") return "Vitopia Day 3";
+  if (event.name.includes("Mr. Pranav Sharma")) return "Mr. Pranav Sharma";
+  if (event.name.includes("Sarat Raja Uday Boddeda")) return "Mr. Sarat Raja Uday Boddeda";
   return EVENT_NAME_BY_TOKEN[token] ?? event.name;
 }
 
@@ -278,9 +283,9 @@ export default function ScannerPage() {
             <Image
               src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
               alt="VITopia"
-              width={100}
-              height={32}
-              className="h-6 w-auto"
+              width={140}
+              height={45}
+              className="h-10 w-auto"
               unoptimized
             />
           </div>
@@ -396,6 +401,7 @@ export default function ScannerPage() {
                 <div className={`text-center ${status === "success" || status === "already_used" ? "text-black/80" : "text-white/80"}`}>
                   <p className="text-lg font-semibold">{lastResult.data.user?.name ?? "Unknown attendee"}</p>
                   <p className="text-sm">{lastResult.data.quantity} ticket(s)</p>
+                  {lastResult?.data?.event && <p className="text-sm mt-1 opacity-80">{getEventDisplayName(lastResult.data.event as Event)}</p>}
                   {lastResult.data.tshirt?.eligible && (
                     <p className="text-xs mt-1">
                       T-Shirt: {lastResult.data.tshirt.size || "NA"} / {lastResult.data.tshirt.color || "NA"}

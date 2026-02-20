@@ -110,6 +110,7 @@ export interface Order {
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   checkedIn: boolean;
   checkedInAt?: number;
+  mailed: boolean;
   createdAt?: number;
   event?: Event;
   user?: User;
@@ -120,6 +121,8 @@ export async function createOrder(data: {
   userId: string;
   eventId: string;
   quantity: number;
+  registrationId?: string;
+  accessTokens?: string[];
 }): Promise<{ id: string; orderId: string; totalAmount: number } | null> {
   const response = await fetchApi<{ id: string; orderId: string; totalAmount: number }>(
     "/api/orders",
@@ -315,6 +318,7 @@ export interface OrderFilter {
   search?: string;
   paymentStatus?: string;
   eventId?: string;
+  mailed?: string;
   page?: number;
   limit?: number;
 }
@@ -331,6 +335,7 @@ export async function listOrders(filter: OrderFilter): Promise<ListOrdersRespons
   if (filter.search) params.append("search", filter.search);
   if (filter.paymentStatus) params.append("paymentStatus", filter.paymentStatus);
   if (filter.eventId) params.append("eventId", filter.eventId);
+  if (filter.mailed) params.append("mailed", filter.mailed);
   if (filter.page) params.append("page", filter.page.toString());
   if (filter.limit) params.append("limit", filter.limit.toString());
   
@@ -351,4 +356,25 @@ export async function deleteOrder(orderId: string): Promise<boolean> {
     method: "DELETE"
   });
   return !!response.success;
+}
+
+// Mail
+export interface SendMailResult {
+  orderId: string;
+  status: "sent" | "failed";
+  error?: string;
+}
+
+export interface SendMailsResponse {
+  sent: number;
+  failed: number;
+  results: SendMailResult[];
+}
+
+export async function sendMails(orderIds: string[]): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send", {
+    method: "POST",
+    body: JSON.stringify({ orderIds }),
+  });
+  return response.data || null;
 }

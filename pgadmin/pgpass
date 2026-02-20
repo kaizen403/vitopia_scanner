@@ -1,0 +1,2 @@
+opus-postgres:5432:*:postgres:postgres
+*:5432:*:postgres:postgres

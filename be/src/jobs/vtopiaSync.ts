@@ -52,7 +52,7 @@ export async function syncRegistrations() {
 
     // 3. Filter for NEW registrations only
     const newRegistrations = allRegistrations.filter(
-      (reg: any) => reg.registration_id && !existingIds.has(reg.registration_id)
+      (reg: any) => reg.registration_id && !existingIds.has(parseInt(reg.registration_id, 10))
     );
 
     console.log(`[VTOPIA Sync] Fetched ${allRegistrations.length} total. Found ${newRegistrations.length} new records.`);
@@ -123,8 +123,10 @@ export async function syncRegistrations() {
           const paymentTimestamp = reg.payment_date ? BigInt(new Date(reg.payment_date).getTime()) : BigInt(Date.now());
           const totalAmount = reg.total ? Math.round(parseFloat(reg.total)) : 0; 
           
-          await prisma.order.create({
-            data: {
+          await prisma.order.upsert({
+            where: { orderId: reg.order_id || `VTOPIA-${reg.registration_id}` },
+            update: {},
+            create: {
               registrationId: parseInt(reg.registration_id, 10),
               orderId: reg.order_id || `VTOPIA-${reg.registration_id}`,
               receiptId: reg.receipt_id,
@@ -133,7 +135,7 @@ export async function syncRegistrations() {
               fieldValues: reg.field_values ? JSON.parse(JSON.stringify(reg.field_values)) : null,
               totalAmount: totalAmount,
               quantity: 1,
-              paymentStatus: 'paid',
+              paymentStatus: 'paid' as any,
               sourceEventCode: eventIdFromApi,
               userId: user.id,
               eventId: event.id,

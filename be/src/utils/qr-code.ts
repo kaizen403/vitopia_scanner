@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
-const QR_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+const QR_SECRET = process.env.JWT_SECRET || "Salt123";
 const HMAC_SIG_LENGTH = 12; // 12 hex chars = 48 bits, plenty for tamper detection
 
 export interface QRPayload {

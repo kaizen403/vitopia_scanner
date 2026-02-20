@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "VITopia Fest DB",
+      "Group": "Servers",
+      "Host": "opus-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "fest",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "PassFile": "/var/lib/pgadmin/pgpass"
+    }
+  }
+}

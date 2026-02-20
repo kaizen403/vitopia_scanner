@@ -46,9 +46,9 @@ export default function LoginPage() {
           <Image
             src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
             alt="VITopia"
-            width={160}
-            height={50}
-            className="h-10 w-auto mx-auto mb-6"
+            width={240}
+            height={75}
+            className="h-16 w-auto mx-auto mb-6"
             unoptimized
           />
           <h1 className="font-heading text-3xl tracking-wide text-white mb-2">
