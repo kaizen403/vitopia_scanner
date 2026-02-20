@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
 
-    if (username === "admin" && password === "SIBI123") {
+    if (username === "sibi" && password === "sibi") {
       const token = await signToken({ role: "admin" });
 
       const response = NextResponse.json({ success: true });
