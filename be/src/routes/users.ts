@@ -1,23 +1,7 @@
-// @ts-nocheck
 import { Router, Request, Response } from "express";
-import { ConvexHttpClient } from "convex/browser";
-import { loadConvexApi } from "../utils/convex-api.js";
+import * as usersRepo from "../db/users.js";
 
 const router: Router = Router();
-
-// Lazy-load Convex client
-let _convex: ConvexHttpClient | null = null;
-const getConvex = () => {
-  if (!_convex) {
-    const url = process.env.CONVEX_URL;
-    if (!url) throw new Error("CONVEX_URL environment variable is required");
-    _convex = new ConvexHttpClient(url);
-  }
-  return _convex;
-};
-
-// Helper to get Convex API
-const getApi = async () => loadConvexApi();
 
 /**
  * POST /api/users
@@ -35,9 +19,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const userId = await convex.mutation(api.users.createOrGet, {
+    const userId = await usersRepo.createOrGet({
       email,
       name,
       phone,
@@ -60,11 +42,7 @@ router.post("/", async (req: Request, res: Response) => {
  */
 router.get("/email/:email", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const user = await convex.query(api.users.getByEmail, {
-      email: req.params.email,
-    });
+    const user = await usersRepo.getByEmail(req.params.email);
     if (!user) {
       res.status(404).json({ success: false, error: "User not found" });
       return;
@@ -82,11 +60,7 @@ router.get("/email/:email", async (req: Request, res: Response) => {
  */
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const user = await convex.query(api.users.getById, {
-      userId: req.params.id,
-    });
+    const user = await usersRepo.getById(req.params.id);
     if (!user) {
       res.status(404).json({ success: false, error: "User not found" });
       return;
@@ -104,11 +78,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  */
 router.get("/:id/orders", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const orders = await convex.query(api.users.getOrders, {
-      userId: req.params.id,
-    });
+    const orders = await usersRepo.getOrders(req.params.id);
     res.json({ success: true, data: orders });
   } catch (error) {
     console.error("Error fetching user orders:", error);

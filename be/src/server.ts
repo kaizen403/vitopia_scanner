@@ -1,4 +1,25 @@
 import { createApp } from "./app.js";
+import { validateDatabaseUrl } from "./db/readiness.js";
+
+const parseDatabaseUrlOrThrow = (): URL => {
+  const databaseUrl = process.env.DATABASE_URL;
+  const validation = validateDatabaseUrl(databaseUrl);
+  if (!validation.ok) {
+    throw new Error(validation.error);
+  }
+
+  return new URL(databaseUrl as string);
+};
+
+try {
+  const parsedDatabaseUrl = parseDatabaseUrlOrThrow();
+  console.log(
+    `[startup] DATABASE_URL configured for ${parsedDatabaseUrl.hostname}:${parsedDatabaseUrl.port || "5432"}`
+  );
+} catch (err) {
+  console.error(`[startup] ${err instanceof Error ? err.message : "Invalid DATABASE_URL"}`);
+  process.exit(1);
+}
 
 const app = createApp();
 const PORT = process.env.PORT || 3001;

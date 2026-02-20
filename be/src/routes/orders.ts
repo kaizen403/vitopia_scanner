@@ -1,23 +1,8 @@
 import { Router, Request, Response } from "express";
-import { ConvexHttpClient } from "convex/browser";
 import { generateQRCode } from "../utils/qr-code.js";
-import { loadConvexApi } from "../utils/convex-api.js";
+import * as ordersRepo from "../db/orders.js";
 
 const router: Router = Router();
-
-// Lazy-load Convex client
-let _convex: ConvexHttpClient | null = null;
-const getConvex = () => {
-  if (!_convex) {
-    const url = process.env.CONVEX_URL;
-    if (!url) throw new Error("CONVEX_URL environment variable is required");
-    _convex = new ConvexHttpClient(url);
-  }
-  return _convex;
-};
-
-// Helper to get Convex API
-const getApi = async () => loadConvexApi();
 
 /**
  * POST /api/orders
@@ -35,11 +20,9 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const result = await convex.mutation(api.orders.create, {
-      userId: userId as any,
-      eventId: eventId as any,
+    const result = await ordersRepo.create({
+      userId,
+      eventId,
       quantity,
     });
 
@@ -64,18 +47,15 @@ router.post("/:orderId/pay", async (req: Request, res: Response) => {
   const { orderId } = req.params;
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    
     // Get order details first
-    const order = await convex.query(api.orders.getByOrderId, { orderId });
+    const order = await ordersRepo.getByOrderId(orderId);
     if (!order) {
       res.status(404).json({ success: false, error: "Order not found" });
       return;
     }
 
     // Mark as paid
-    await convex.mutation(api.orders.markAsPaid, { orderId });
+    await ordersRepo.markAsPaid(orderId);
 
     const qrCode = generateQRCode({
       orderId: order.orderId,
@@ -106,9 +86,7 @@ router.get("/:orderId", async (req: Request, res: Response) => {
   const { orderId } = req.params;
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const order = await convex.query(api.orders.getByOrderId, { orderId });
+    const order = await ordersRepo.getByOrderId(orderId);
     if (!order) {
       res.status(404).json({ success: false, error: "Order not found" });
       return;
@@ -143,9 +121,7 @@ router.get("/:orderId/qr", async (req: Request, res: Response) => {
   const { orderId } = req.params;
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const order = await convex.query(api.orders.getByOrderId, { orderId });
+    const order = await ordersRepo.getByOrderId(orderId);
     if (!order) {
       res.status(404).json({ success: false, error: "Order not found" });
       return;

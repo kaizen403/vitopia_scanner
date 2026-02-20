@@ -1,23 +1,7 @@
 import { Router, Request, Response } from "express";
-import { ConvexHttpClient } from "convex/browser";
-import { generateQRCode } from "../utils/qr-code.js";
-import { loadConvexApi } from "../utils/convex-api.js";
+import * as eventsRepo from "../db/events.js";
 
 const router: Router = Router();
-
-// Lazy-load Convex client
-let _convex: ConvexHttpClient | null = null;
-const getConvex = () => {
-  if (!_convex) {
-    const url = process.env.CONVEX_URL;
-    if (!url) throw new Error("CONVEX_URL environment variable is required");
-    _convex = new ConvexHttpClient(url);
-  }
-  return _convex;
-};
-
-// Helper to get Convex API
-const getApi = async () => loadConvexApi();
 
 /**
  * GET /api/events
@@ -25,9 +9,7 @@ const getApi = async () => loadConvexApi();
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const events = await convex.query(api.events.listActive, {});
+    const events = await eventsRepo.listActive();
     res.json({ success: true, data: events });
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -41,11 +23,7 @@ router.get("/", async (req: Request, res: Response) => {
  */
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const event = await convex.query(api.events.getById, {
-      eventId: req.params.id as any,
-    });
+    const event = await eventsRepo.getById(req.params.id);
     if (!event) {
       res.status(404).json({ success: false, error: "Event not found" });
       return;
@@ -62,7 +40,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  * Create a new event (admin only)
  */
 router.post("/", async (req: Request, res: Response) => {
-  const { name, description, date, venue, capacity, price } = req.body;
+  const { name, description, date, venue, capacity, price, accessToken, category, scanOrder } = req.body;
 
   if (!name || !description || !date || !venue || !capacity || price === undefined) {
     res.status(400).json({
@@ -73,15 +51,16 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const eventId = await convex.mutation(api.events.create, {
+    const eventId = await eventsRepo.create({
       name,
       description,
       date,
       venue,
       capacity,
       price,
+      accessToken,
+      category,
+      scanOrder,
     });
 
     res.status(201).json({
@@ -100,11 +79,7 @@ router.post("/", async (req: Request, res: Response) => {
  */
 router.get("/:id/stats", async (req: Request, res: Response) => {
   try {
-    const convex = getConvex();
-    const api = await getApi();
-    const stats = await convex.query(api.events.getStats, {
-      eventId: req.params.id as any,
-    });
+    const stats = await eventsRepo.getStats(req.params.id);
     if (!stats) {
       res.status(404).json({ success: false, error: "Event not found" });
       return;
