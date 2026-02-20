@@ -1,0 +1,22 @@
+{
+  "stats": {
+    "event": {
+      "_id": "f6bf608a-99d2-4d43-a731-7270d20dc9d6",
+      "_creationTime": 1771579637672,
+      "id": "f6bf608a-99d2-4d43-a731-7270d20dc9d6",
+      "convexId": null,
+      "name": "Evidence Event",
+      "description": "Testing DB",
+      "date": 1771580637668,
+      "venue": "Main Hall",
+      "capacity": 100,
+      "price": 50,
+      "isActive": true,
+      "createdAt": 1771579637672
+    },
+    "totalTicketsSold": 0,
+    "totalCheckedIn": 0,
+    "totalRevenue": 0,
+    "capacityRemaining": 100
+  }
+}

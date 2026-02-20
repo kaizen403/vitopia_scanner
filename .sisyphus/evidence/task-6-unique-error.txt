@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "orders_order_id_key" ON "orders"("order_id");

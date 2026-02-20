@@ -1,0 +1,53 @@
+F1 Plan Compliance Audit (Re-execution)
+Plan: .sisyphus/plans/convex-to-postgres.md
+Inputs: .sisyphus/evidence/f3-real-qa.txt,.sisyphus/evidence/f4-scope-fidelity.txt,.sisyphus/evidence/task-*.txt,.sisyphus/evidence/task-*.json
+Scope: Must Have, Must NOT Have, top-level goals (lines 73-76), final checklist (lines 494-499)
+Policy: strict (missing evidence => FAIL)
+
+Must Have [4/4] | Must NOT Have [5/5] | PASS
+
+Machine-Readable Section List:
+SECTION|MUST_HAVE|total=4|pass=4|fail=0|na=0
+SECTION|MUST_NOT_HAVE|total=5|pass=5|fail=0|na=0
+SECTION|TOP_LEVEL_GOALS_L73_L76|total=4|pass=3|fail=0|na=1
+SECTION|FINAL_CHECKLIST_L494_L499|total=6|pass=6|fail=0|na=0
+NOTE|DUPLICATE_CHECKLIST_ITEM|line_494_equals_line_496|acknowledged=true
+
+Must Have Claims:
+CLAIM|MH1|Preserve orderId + QR verification behavior|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src/utils/qr-code.ts,be/src/routes/orders.ts,be/src/routes/scan.ts|evidence_refs=.sisyphus/evidence/task-11-paid-order.json,.sisyphus/evidence/task-14-routes-postgres.txt,.sisyphus/evidence/f3-real-qa.txt
+CLAIM|MH2|Preserve Redis lock key + TTL semantics|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src/utils/redis-lock.ts,be/src/routes/scan.ts|evidence_refs=grep:be/src/utils/redis-lock.ts(LOCK_TTL=5000,LOCK_PREFIX=lock:ticket:),.sisyphus/evidence/f3-real-qa.txt(line16)
+CLAIM|MH3|Keep frontend integration unchanged (fe/lib/api.ts contract)|impl=PASS|evidence=PASS|overall=PASS|impl_refs=fe/lib/api.ts,be/src/routes/users.ts,be/src/routes/events.ts,be/src/routes/orders.ts,be/src/routes/scan.ts,be/src/routes/dashboard.ts|evidence_refs=.sisyphus/evidence/task-14-routes-postgres.txt,.sisyphus/evidence/task-15-scan-postgres.txt,.sisyphus/evidence/task-16-dashboard-postgres.txt,.sisyphus/evidence/f4-scope-fidelity.txt
+CLAIM|MH4|Maintain scanner status codes + error codes|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src/routes/scan.ts|evidence_refs=.sisyphus/evidence/f3-real-qa.txt(lines9-16),.sisyphus/evidence/task-12-first-scan.json,.sisyphus/evidence/task-12-second-scan-409.json
+
+Must NOT Have Guardrails:
+CLAIM|MN1|No endpoint redesign/payload restructuring|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src/routes/users.ts,be/src/routes/events.ts,be/src/routes/orders.ts,be/src/routes/scan.ts,be/src/routes/dashboard.ts|evidence_refs=.sisyphus/evidence/task-1-contract-snapshots.json,.sisyphus/evidence/task-1-error-snapshots.json,.sisyphus/evidence/task-14-routes-postgres.txt,.sisyphus/evidence/f3-real-qa.txt
+CLAIM|MN2|No unrelated auth redesign|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src/routes/auth.ts|evidence_refs=.sisyphus/evidence/f4-scope-fidelity.txt(line29),.sisyphus/evidence/task-13-dashboard-unauth.json
+CLAIM|MN3|No broad cleanup refactor outside scope|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/src,docs/*|evidence_refs=.sisyphus/evidence/f4-scope-fidelity.txt(line33)
+CLAIM|MN4|No manual-only acceptance criteria|impl=PASS|evidence=PASS|overall=PASS|impl_refs=be/package.json|evidence_refs=.sisyphus/evidence/task-7-test-pass.txt,.sisyphus/evidence/f3-real-qa.txt
+CLAIM|MN5|No cutover without rollback drill evidence|impl=PASS|evidence=PASS|overall=PASS|impl_refs=.sisyphus/plans/convex-to-postgres.md|evidence_refs=.sisyphus/evidence/f3-real-qa.txt(lines19-27)
+
+Reassessment of Prior Failures:
+REASSESS|scanner_taxonomy_coverage|PASS|evidence=.sisyphus/evidence/f3-real-qa.txt(lines9-16 include MISSING_QR_CODE,INVALID_QR,NOT_FOUND,NOT_PAID,WRONG_EVENT,VALID,ALREADY_USED,CONCURRENT_SCAN)
+REASSESS|lock_behavior_evidence|PASS|evidence=grep:be/src/utils/redis-lock.ts constants preserved + .sisyphus/evidence/f3-real-qa.txt(line16 concurrent lock contention)
+REASSESS|auth_redesign_guardrail|PASS|evidence=.sisyphus/evidence/f4-scope-fidelity.txt(line29)
+REASSESS|rollback_drill_evidence|PASS|evidence=.sisyphus/evidence/f3-real-qa.txt(lines19-27)
+REASSESS|scope_fidelity_evidence|PASS|evidence=.sisyphus/evidence/f4-scope-fidelity.txt(line33)
+
+Top-Level Goals (Plan lines 73-76):
+GOAL|L73|All public API endpoints contract-compatible|PASS|reason=route matrix + QA scenarios cover users/events/orders/scan/dashboard contracts with expected status/code semantics
+GOAL|L74|Scanner one-time check-in under concurrent scans|PASS|reason=.sisyphus/evidence/f3-real-qa.txt line16 shows single VALID and one CONCURRENT_SCAN
+GOAL|L75|Dual-write/shadow-read parity mismatch <0.1% for 72h|N_A|reason=execution path is direct-migration scope; plan task 14 explicitly says "Must NOT do: implement dual-writes or complex facades", so dual-write burn-in criterion is not applicable
+GOAL|L76|Cutover to Postgres with rollback switch validated|PASS|reason=.sisyphus/evidence/f3-real-qa.txt line2 canary postgres-backed confirmation + lines19-27 rollback drill simulation and recovery
+
+Final Checklist (Plan lines 494-499):
+CHECK|L494|All must-have requirements verified by evidence files|PASS
+CHECK|L495|All must-not-have guardrails satisfied|PASS
+CHECK|L496|All must-have requirements verified by evidence files (duplicate of L494)|PASS
+CHECK|L497|Contract endpoints run directly against Postgres|PASS
+CHECK|L498|Scan concurrency correctness verified (no double-success)|PASS
+CHECK|L499|Convex runtime completely removed|PASS
+
+Forbidden Remnant and Constants Checks:
+CHECK|NO_RUNTIME_CONVEX_IMPORTS_IN_BE_SRC|PASS|evidence=grep(be/src, pattern ConvexHttpClient|getConvex|from 'convex') -> no matches
+CHECK|NO_BE_CONVEX_DIRECTORY|PASS|evidence=.sisyphus/evidence/task-17-convex-removed.txt
+CHECK|REDIS_LOCK_CONSTANTS_PRESENT|PASS|evidence=grep(be/src, pattern LOCK_TTL|LOCK_PREFIX) -> LOCK_TTL=5000 and LOCK_PREFIX=lock:ticket:

@@ -1,0 +1,298 @@
+commit 2877a176223ba956d0f38d4a2ef8f85350439725
+Author: Rishi Vhavle <rishivhavle21@gmail.com>
+Date:   Thu Jan 15 02:02:02 2026 +0530
+
+    add seed/cleanup scripts, remove checkedInGate
+---
+ be/convex/users.ts | 173 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 173 insertions(+)
+
+diff --git a/be/convex/users.ts b/be/convex/users.ts
+index f847396..9cf3caa 100644
+--- a/be/convex/users.ts
++++ b/be/convex/users.ts
+@@ -90,3 +90,176 @@ export const getOrders = query({
+     return enrichedOrders;
+   },
+ });
++
++// Seed demo users and orders for Vitopia 2026
++export const seedVitopia = mutation({
++  args: {},
++  handler: async (ctx) => {
++    const firstNames = [
++      "Aarav",
++      "Aditi",
++      "Akash",
++      "Akhila",
++      "Ameya",
++      "Ananya",
++      "Arjun",
++      "Bhavya",
++      "Chaitra",
++      "Dev",
++      "Divya",
++      "Eshan",
++      "Gauri",
++      "Harsha",
++      "Ishita",
++      "Karthik",
++      "Kavya",
++      "Lakshay",
++      "Meera",
++      "Nikhil",
++      "Pranav",
++      "Priya",
++      "Rahul",
++      "Riya",
++      "Saanvi",
++      "Sai",
++      "Sakshi",
++      "Sameer",
++      "Shreya",
++      "Tanvi",
++      "Varun",
++      "Ved",
++      "Vikram",
++      "Yash",
++    ];
++
++    const lastNames = [
++      "Agarwal",
++      "Bhat",
++      "Chopra",
++      "Das",
++      "Desai",
++      "Gupta",
++      "Iyer",
++      "Jain",
++      "Kapoor",
++      "Kulkarni",
++      "Menon",
++      "Mishra",
++      "Nair",
++      "Patel",
++      "Rao",
++      "Reddy",
++      "Saxena",
++      "Sharma",
++      "Singh",
++      "Verma",
++    ];
++
++    const randomFrom = (list) => list[Math.floor(Math.random() * list.length)];
++    const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
++
++    const generateOrderId = () => {
++      const timestamp = Date.now().toString(36);
++      const random = Math.random().toString(36).substring(2, 8);
++      return `ORD-${timestamp}-${random}`.toUpperCase();
++    };
++
++    const ensureEvent = async (name, description, dateOffsetDays) => {
++      const existing = await ctx.db
++        .query("events")
++        .filter((q) => q.eq(q.field("name"), name))
++        .first();
++
++      if (existing) return existing;
++
++      const eventId = await ctx.db.insert("events", {
++        name,
++        description,
++        date: Date.now() + dateOffsetDays * 24 * 60 * 60 * 1000,
++        venue: "VIT-AP Campus",
++        capacity: 500,
++        price: 0,
++        isActive: true,
++        createdAt: Date.now(),
++      });
++
++      return await ctx.db.get(eventId);
++    };
++
++    const day1Event = await ensureEvent(
++      "Vitopia2026-Day1",
++      "VITopia 2026 - Day 1",
++      1
++    );
++    const day2Event = await ensureEvent(
++      "Vitopia2026-Day2",
++      "VITopia 2026 - Day 2",
++      2
++    );
++
++    const usedEmails = new Set();
++
++    const createUserAndOrder = async (event, count) => {
++      let created = 0;
++
++      while (created < count) {
++        const first = randomFrom(firstNames);
++        const last = randomFrom(lastNames);
++        const name = `${first} ${last}`;
++        const nameToken = `${first}${last}`.toLowerCase();
++        const year = randomInt(20, 25);
++        const roll = randomInt(1000, 9999);
++        const email = `${year}bce${roll}.${nameToken}@vitapstudent.ac.in`;
++
++        if (usedEmails.has(email)) {
++          continue;
++        }
++        usedEmails.add(email);
++
++        let user = await ctx.db
++          .query("users")
++          .withIndex("by_email", (q) => q.eq("email", email))
++          .first();
++
++        if (!user) {
++          const userId = await ctx.db.insert("users", {
++            email,
++            name,
++            college: "VIT-AP",
++            createdAt: Date.now(),
++          });
++          user = await ctx.db.get(userId);
++        }
++
++        if (!user) continue;
++
++        const orderId = generateOrderId();
++        await ctx.db.insert("orders", {
++          orderId,
++          userId: user._id,
++          eventId: event._id,
++          quantity: 1,
++          totalAmount: event.price,
++          paymentStatus: "paid",
++          checkedIn: false,
++          createdAt: Date.now(),
++          updatedAt: Date.now(),
++        });
++
++        created += 1;
++      }
++
++      return created;
++    };
++
++    const day1Orders = await createUserAndOrder(day1Event, 50);
++    const day2Orders = await createUserAndOrder(day2Event, 25);
++
++    return {
++      day1EventId: day1Event._id,
++      day2EventId: day2Event._id,
++      day1Orders,
++      day2Orders,
++    };
++  },
++});
+
+commit c7a7dee1b41eb4cee74347ca1bdcb9e74c267504
+Author: Rishi Vhavle <rishivhavle21@gmail.com>
+Date:   Wed Jan 14 23:17:22 2026 +0530
+
+    init: working demo
+---
+ be/convex/users.ts | 92 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 92 insertions(+)
+
+diff --git a/be/convex/users.ts b/be/convex/users.ts
+new file mode 100644
+index 0000000..f847396
+--- /dev/null
++++ b/be/convex/users.ts
+@@ -0,0 +1,92 @@
++// @ts-nocheck
++// NOTE: Type checking is disabled until `npx convex dev` is run to generate types
++import { mutation, query } from "./_generated/server";
++import { v } from "convex/values";
++
++// Get user by email
++export const getByEmail = query({
++  args: { email: v.string() },
++  handler: async (ctx, args) => {
++    return await ctx.db
++      .query("users")
++      .withIndex("by_email", (q) => q.eq("email", args.email))
++      .first();
++  },
++});
++
++// Get user by ID
++export const getById = query({
++  args: { userId: v.id("users") },
++  handler: async (ctx, args) => {
++    return await ctx.db.get(args.userId);
++  },
++});
++
++// Create or get user
++export const createOrGet = mutation({
++  args: {
++    email: v.string(),
++    name: v.string(),
++    phone: v.optional(v.string()),
++    college: v.optional(v.string()),
++  },
++  handler: async (ctx, args) => {
++    // Check if user exists
++    const existing = await ctx.db
++      .query("users")
++      .withIndex("by_email", (q) => q.eq("email", args.email))
++      .first();
++
++    if (existing) {
++      return existing._id;
++    }
++
++    // Create new user
++    const userId = await ctx.db.insert("users", {
++      ...args,
++      createdAt: Date.now(),
++    });
++
++    return userId;
++  },
++});
++
++// Update user
++export const update = mutation({
++  args: {
++    userId: v.id("users"),
++    name: v.optional(v.string()),
++    phone: v.optional(v.string()),
++    college: v.optional(v.string()),
++  },
++  handler: async (ctx, args) => {
++    const { userId, ...updates } = args;
++    const filteredUpdates = Object.fromEntries(
++      Object.entries(updates).filter(([, val]) => val !== undefined)
++    );
++    await ctx.db.patch(userId, filteredUpdates);
++    return userId;
++  },
++});
++
++// Get user's orders
++export const getOrders = query({
++  args: { userId: v.id("users") },
++  handler: async (ctx, args) => {
++    const orders = await ctx.db
++      .query("orders")
++      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
++      .order("desc")
++      .collect();
++
++    // Enrich with event data
++    const enrichedOrders = await Promise.all(
++      orders.map(async (order) => {
++        const event = await ctx.db.get(order.eventId);
++        return { ...order, event };
++      })
++    );
++
++    return enrichedOrders;
++  },
++});

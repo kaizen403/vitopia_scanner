@@ -1,0 +1,30 @@
+Task: 14 - Direct migration of users/events/orders routes to Postgres
+Timestamp: 2026-02-20T10:36:26.244Z
+Database URL: postgresql://postgres:postgres@127.0.0.1:55432/fest
+
+Command executed:
+DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:55432/fest' JWT_SECRET='task14-secret' pnpm exec tsx <<'EOF' ... EOF
+
+Focused API checks (supertest against createApp):
+- POST /api/users (missing name) -> 400 { success: false, error: "Missing required fields: email, name" }
+- POST /api/users -> 201 { success: true, data: { userId: "92865e4b-8ad1-459e-9056-0d653e04e066" } }
+- GET /api/users/email/:email -> 200 { success: true, data._id present }
+- POST /api/events -> 201 { success: true, data: { eventId: "33a1ab44-5159-4c6a-891f-b3e73dd60015" } }
+- GET /api/events -> 200 { success: true, data: [...] }
+- GET /api/events/:id -> 200 { success: true, data._id present }
+- POST /api/orders -> 201 { success: true, data: { id: "84ecadc6-3ecb-4dc7-8ad8-e1b248ba0203", orderId: "ORD-MLUR8U7D-Y4JGU6", totalAmount: 900 } }
+- GET /api/orders/:orderId (pending) -> 200 { success: true, data.paymentStatus: "pending", data.qrCode: null }
+- POST /api/orders/:orderId/pay -> 200 { success: true, message: "Payment successful", data.qrCode present }
+- GET /api/orders/:orderId (paid) -> 200 { success: true, data.paymentStatus: "paid", data.qrCode present }
+- GET /api/orders/:orderId/qr -> 200 { success: true, data.qrCode present }
+- GET /api/users/:id -> 200 { success: true, data._id present }
+- GET /api/users/:id/orders -> 200 { success: true, data count: 1 }
+- GET /api/events/:id/stats -> 200 { success: true, data.totalTicketsSold: 2, data.totalRevenue: 900, data.capacityRemaining: 98 }
+
+Run summary:
+- userId=92865e4b-8ad1-459e-9056-0d653e04e066
+- eventId=33a1ab44-5159-4c6a-891f-b3e73dd60015
+- orderId=ORD-MLUR8U7D-Y4JGU6
+- paidOrderHasQrCode=true
+- qrEndpointHasQrCode=true
+- paidStatus=paid

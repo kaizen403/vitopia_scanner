@@ -1,0 +1,9 @@
+Evidence for Task 17: Convex Removed
+======================================
+\n[1] Grep for 'convex' in be/src:
+No convex runtime imports found
+No getConvex references found
+\n[2] Package Dependency Check (be/package.json):
+No convex references in package.json
+\n[3] Directory Check (be/convex):
+be/convex folder successfully removed

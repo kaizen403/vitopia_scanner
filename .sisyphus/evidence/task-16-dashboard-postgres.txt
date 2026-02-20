@@ -1,0 +1,13 @@
+Auth response: { success: true, token: '623dd6e4-191b-4856-823c-5a71c0de0530' }
+Data response: {
+  "success": true,
+  "data": {
+    "analytics": {
+      "totalTicketsSold": 0,
+      "totalCheckedIn": 0,
+      "totalRemaining": 0,
+      "events": []
+    },
+    "scanLogs": []
+  }
+}

@@ -1,0 +1,1 @@
+{"before":0,"after":0,"delta":0,"persisted":0,"errorMessage":"forced-rollback","rolledBack":true}

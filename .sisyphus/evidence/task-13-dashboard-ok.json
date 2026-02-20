@@ -1,0 +1,29 @@
+{
+  "analytics": {
+    "totalTicketsSold": 2,
+    "totalCheckedIn": 2,
+    "totalRemaining": 0,
+    "events": [
+      {
+        "eventId": "f6bf608a-99d2-4d43-a731-7270d20dc9d6",
+        "eventName": "Evidence Event",
+        "sold": 2,
+        "checkedIn": 2,
+        "remaining": 98,
+        "capacity": 100
+      }
+    ]
+  },
+  "scanLogs": [
+    {
+      "orderId": "ORDER-DASH",
+      "scanResult": "success",
+      "scannedBy": "gate1",
+      "gate": "main",
+      "timestamp": 1771582911542,
+      "eventName": "Evidence Event",
+      "userName": "Dash",
+      "userEmail": "dash@example.com"
+    }
+  ]
+}

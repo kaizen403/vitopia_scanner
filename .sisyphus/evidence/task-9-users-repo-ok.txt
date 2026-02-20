@@ -1,0 +1,6 @@
+=== Testing OK Cases ===
+Created user ID: 3de084e9-f8ec-4f0a-ba70-eab0ab184769
+Got existing user ID: 3de084e9-f8ec-4f0a-ba70-eab0ab184769
+Are IDs same? true
+Get by email: Test User
+Get by ID: test-1771578908206@example.com

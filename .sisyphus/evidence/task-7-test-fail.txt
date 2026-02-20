@@ -1,0 +1,38 @@
+
+> be@1.0.0 test /home/kaizen/opus-fest/be
+> vitest run
+
+
+ RUN  v3.2.4 /home/kaizen/opus-fest/be
+
+ ❯ src/__tests__/health.test.ts (1 test | 1 failed) 36ms
+   × GET /health > returns service metadata 34ms
+     → expected 'fest-entry-verification' to be 'forced-failure-service' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/health.test.ts > GET /health > returns service metadata
+AssertionError: expected 'fest-entry-verification' to be 'forced-failure-service' // Object.is equality
+
+Expected: [32m"f[7morced-failure-service[27m"[39m
+Received: [31m"f[7mest-entry-verification[27m"[39m
+
+ ❯ src/__tests__/health.test.ts:17:35
+     15|     expect(response.status).toBe(200);
+     16|     expect(response.body.status).toBe("ok");
+     17|     expect(response.body.service).toBe(expectedService);
+       |                                   ^
+     18|     expect(Date.parse(response.body.timestamp)).not.toBeNaN();
+     19|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  13:35:48
+   Duration  881ms (transform 144ms, setup 0ms, collect 392ms, tests 36ms, environment 0ms, prepare 115ms)
+
+/home/kaizen/opus-fest/be:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  be@1.0.0 test: `vitest run`
+Exit status 1

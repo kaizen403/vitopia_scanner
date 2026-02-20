@@ -1,0 +1,51 @@
+{
+  "created": {
+    "id": "883b6fa5-0902-4a1a-b1ae-14a8992c1e04",
+    "orderId": "ORD-MLUQ63CZ-56O68S",
+    "totalAmount": 700
+  },
+  "order": {
+    "_id": "883b6fa5-0902-4a1a-b1ae-14a8992c1e04",
+    "_creationTime": 1771581978754,
+    "id": "883b6fa5-0902-4a1a-b1ae-14a8992c1e04",
+    "convexId": null,
+    "orderId": "ORD-MLUQ63CZ-56O68S",
+    "userId": "356f2a13-8f47-4946-a80d-9081a895502c",
+    "eventId": "f316544e-4116-4f25-9f3c-ef66d5d97471",
+    "quantity": 2,
+    "totalAmount": 700,
+    "paymentStatus": "paid",
+    "checkedIn": false,
+    "checkedInAt": null,
+    "checkedInBy": null,
+    "checkedInGate": null,
+    "createdAt": 1771581978754,
+    "updatedAt": 1771581978771,
+    "user": {
+      "_id": "356f2a13-8f47-4946-a80d-9081a895502c",
+      "_creationTime": 1771581978486,
+      "id": "356f2a13-8f47-4946-a80d-9081a895502c",
+      "convexId": null,
+      "email": "task11-paid-1771581978486@example.com",
+      "name": "Task11 Paid User",
+      "phone": null,
+      "college": null,
+      "createdAt": 1771581978486
+    },
+    "event": {
+      "_id": "f316544e-4116-4f25-9f3c-ef66d5d97471",
+      "_creationTime": 1771581978486,
+      "id": "f316544e-4116-4f25-9f3c-ef66d5d97471",
+      "convexId": null,
+      "name": "Task11 Paid Event",
+      "description": "Order repository happy path",
+      "date": 1771668378486,
+      "venue": "Hall A",
+      "capacity": 5,
+      "price": 350,
+      "isActive": true,
+      "createdAt": 1771581978486
+    }
+  },
+  "qrCode": "ORD-MLUQ63CZ-56O68S.DFB1AB55F047"
+}

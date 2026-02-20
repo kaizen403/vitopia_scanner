@@ -1,0 +1,8 @@
+CREATE INDEX "events_is_active_idx" ON "events"("is_active");
+CREATE INDEX "events_date_idx" ON "events"("date");
+CREATE INDEX "orders_event_id_idx" ON "orders"("event_id");
+CREATE INDEX "orders_user_id_idx" ON "orders"("user_id");
+CREATE INDEX "orders_event_id_checked_in_idx" ON "orders"("event_id", "checked_in");
+CREATE INDEX "scan_logs_order_id_idx" ON "scan_logs"("order_id");
+CREATE INDEX "scan_logs_event_id_idx" ON "scan_logs"("event_id");
+CREATE INDEX "gates_event_id_idx" ON "gates"("event_id");

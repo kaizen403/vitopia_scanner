@@ -1,0 +1,21 @@
+{
+  "statusEquivalent": 200,
+  "codeEquivalent": "VALID",
+  "result": {
+    "success": true,
+    "reason": "success",
+    "eventId": "9d074c48-8135-4a47-a661-8e6a00bbb544",
+    "order": {
+      "orderId": "ORD-MLUQENCF-7255GO",
+      "quantity": 1
+    },
+    "user": {
+      "name": "Task12 Scan User",
+      "email": "task12-scan-1771582377655@example.com"
+    },
+    "event": {
+      "name": "Task12 Scan Event",
+      "venue": "Gate Hall"
+    }
+  }
+}

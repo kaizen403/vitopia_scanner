@@ -1,0 +1,7 @@
+=== Task 9 QA: Idempotency Check ===
+Creating user with email: idem-1771579206127@example.com
+Call 1 returned ID: 97974cd5-4fa8-4c34-86f9-dd15b02a12d2
+Calling createOrGet again with same email: idem-1771579206127@example.com
+Call 2 returned ID: 97974cd5-4fa8-4c34-86f9-dd15b02a12d2
+Are IDs strictly equal? true
+Orders returned (should be 0): 0

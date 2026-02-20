@@ -1,0 +1,61 @@
+# F2 Code Quality Review Evidence
+
+## Commands Executed
+- Build: `pnpm --filter be build`
+- Test: `pnpm --filter be test`
+- Lint: NOT CONFIGURED (No lint script in package.json)
+
+## Command Outputs
+
+### Build Output
+```
+> be@1.0.0 build /home/kaizen/opus-fest/be
+> tsc
+(Success - 0 errors)
+```
+
+### Test Output
+```
+> be@1.0.0 test /home/kaizen/opus-fest/be
+> vitest run
+
+ ✓ src/__tests__/health.test.ts (1 test) 30ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+```
+
+## Quality Risks & Shortcuts Found
+
+1. **TOCTOU (Time-of-Check to Time-of-Use) Vulnerability in Row Locks**
+   - **File:** `be/src/db/orders.ts`
+   - **Pattern:** 
+     ```typescript
+     const event = await resolveEvent(tx, data.eventId); // State fetched WITHOUT lock
+     // ...
+     await tx.$queryRawUnsafe("SELECT id FROM events WHERE id = $1 FOR UPDATE", event.id); // Lock acquired
+     if (!event.isActive) { // Check uses STALE state from before the lock
+       throw new Error("Event is not active");
+     }
+     ```
+   - **Risk:** The lock is acquired but the business logic checks the stale `event` object fetched before the lock, defeating the purpose of the lock for concurrent capacity/activity checks.
+
+2. **Silent Error Swallowing and `any` Typings**
+   - **File:** `be/src/routes/scan.ts`
+   - **Pattern:**
+     ```typescript
+     let data: any = { orderId };
+     try {
+       const orderInfo = await getByOrderId(orderId);
+       // ...
+     } catch (_) { /* best-effort */ }
+     ```
+   - **Risk:** The `any` type shortcut bypasses type safety, and the empty catch block silently swallows errors. If the database connection drops, this will hide the failure during a high-load double-scan scenario.
+
+3. **Unsafe Raw Query APIs**
+   - **File:** `be/src/db/orders.ts`
+   - **Pattern:**
+     ```typescript
+     await tx.$queryRawUnsafe("SELECT id FROM events WHERE id = $1 FOR UPDATE", event.id);
+     ```
+   - **Risk:** Even though parameterized, Prisma explicitly advises against using `$queryRawUnsafe`. The safe pattern is `$queryRaw\`SELECT id FROM events WHERE id = ${event.id} FOR UPDATE\``. This prevents accidental SQL injection vulnerabilities if the query string is ever refactored to use dynamic strings.

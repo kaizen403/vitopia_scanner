@@ -1,0 +1,33 @@
+F4. Scope Fidelity Check
+
+Methodology:
+Compared working tree and recent commits against the starting point of the migration plan.
+
+File Mapping Evidence:
+- docs/migration-contracts.md -> T1
+- docs/id-mapping-invariants.md -> T2
+- be/.env.example, be/src/app.ts, be/src/server.ts -> T3
+- be/package.json, pnpm-lock.yaml, be/.gitignore -> T4, T7
+- be/prisma.config.ts, be/prisma/schema.prisma -> T5, T6
+- be/src/__tests__/health.test.ts -> T7
+- be/src/db/prisma.ts, be/src/db/transaction.ts, be/src/db/readiness.ts -> T8
+- be/src/db/users.ts -> T9
+- be/src/db/events.ts -> T10
+- be/src/db/orders.ts -> T11
+- be/src/db/scan.ts -> T12
+- be/src/db/dashboard.ts -> T13
+- be/src/routes/users.ts, be/src/routes/events.ts, be/src/routes/orders.ts -> T14
+- be/src/routes/scan.ts -> T15
+- be/src/routes/dashboard.ts -> T16
+- be/convex/*, be/src/utils/convex-api.ts -> T17
+
+Runtime/Generated Artifacts Excluded:
+- .sisyphus/* (evidence, notepads, plan, boulder.json)
+
+Scope Creep Analysis:
+- No changes to frontend (`fe/`) API client or behavior.
+- No changes to authentication logic (`be/src/routes/auth.ts`).
+- No changes to core QR code logic (`be/src/utils/qr-code.ts`).
+- Redis lock implementation logic remained intact.
+
+Tasks [17/17 compliant] | Scope Creep [NONE] | VERDICT: PASS

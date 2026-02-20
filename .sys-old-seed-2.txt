@@ -1,0 +1,67 @@
+commit 2877a176223ba956d0f38d4a2ef8f85350439725
+Author: Rishi Vhavle <rishivhavle21@gmail.com>
+Date:   Thu Jan 15 02:02:02 2026 +0530
+
+    add seed/cleanup scripts, remove checkedInGate
+---
+ be/scripts/generate-vitopia-qrs.js | 52 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/be/scripts/generate-vitopia-qrs.js b/be/scripts/generate-vitopia-qrs.js
+new file mode 100644
+index 0000000..98012a7
+--- /dev/null
++++ b/be/scripts/generate-vitopia-qrs.js
+@@ -0,0 +1,52 @@
++import { createRequire } from "module";
++import fs from "fs";
++import path from "path";
++
++const require = createRequire(import.meta.url);
++const { ConvexHttpClient } = require("convex/browser");
++const dotenv = require("dotenv");
++const jwt = require("jsonwebtoken");
++const QRCode = require("qrcode");
++
++dotenv.config({ path: path.resolve("/home/kaizen/opus-fest/be/.env") });
++
++const { api } = await import("../convex/_generated/api.js");
++
++const convexUrl = process.env.CONVEX_URL;
++const jwtSecret = process.env.JWT_SECRET;
++
++if (!convexUrl) {
++  console.error("Missing CONVEX_URL in /home/kaizen/opus-fest/be/.env");
++  process.exit(1);
++}
++
++if (!jwtSecret) {
++  console.error("Missing JWT_SECRET in /home/kaizen/opus-fest/be/.env");
++  process.exit(1);
++}
++
++const outputDir = "/home/kaizen/opus-fest/QRs";
++if (!fs.existsSync(outputDir)) {
++  fs.mkdirSync(outputDir, { recursive: true });
++}
++
++const client = new ConvexHttpClient(convexUrl);
++
++const result = await client.mutation(api.orders.adjustVitopiaSeed, {});
++
++for (const order of result.day1Orders) {
++  const payload = {
++    orderId: order.orderId,
++    eventId: order.eventId,
++    userId: order.userId,
++    quantity: order.quantity,
++    issuedAt: Date.now(),
++    expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
++  };
++
++  const token = jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
++  const filename = path.join(outputDir, `${order.orderId}.png`);
++  await QRCode.toFile(filename, token, { width: 512, margin: 2 });
++}
++
++console.log(`Generated ${result.day1Orders.length} QR codes in ${outputDir}`);

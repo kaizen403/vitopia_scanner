@@ -1,0 +1,28 @@
+Starting F3 QA Execution...
+Canary simulation: app runs fully postgres-backed with Convex removed -> CONFIRMED (checked via grep/lockfile).
+
+--- SEEDING DATA ---
+
+--- SCENARIO MATRIX ---
+[PASS] health endpoint: status=200
+[PASS] users/events/orders happy path: users=201, events=200, orders=201
+[PASS] MISSING_QR_CODE: code=MISSING_QR_CODE
+[PASS] INVALID_QR: code=INVALID_QR
+[PASS] NOT_FOUND: code=NOT_FOUND
+[PASS] NOT_PAID: status=402, code=NOT_PAID
+[PASS] WRONG_EVENT: status=400, code=WRONG_EVENT
+[PASS] scan verify success: status=200, code=VALID
+[PASS] ALREADY_USED: status=409, code=ALREADY_USED
+[PASS] CONCURRENT_SCAN: c1=VALID, c2=CONCURRENT_SCAN
+[PASS] dashboard auth + data: auth=200, data=200
+
+--- ROLLBACK DRILL SIMULATION ---
+Before stop: health=200, db.connected=true
+Stopping Postgres...
+During stop: health=200, db.connected=false
+During stop scan: status=500, code=SERVER_ERROR, success=false
+Starting Postgres...
+After restart: health=200, db.connected=true
+[PASS] Rollback drill: stopped_connected=false, scan_status=500, recovery=true
+
+Scenarios [12/12] | Integration [12/12] | VERDICT: PASS

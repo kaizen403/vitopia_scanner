@@ -1,0 +1,163 @@
+commit 510c1c6d7acc1f125403f964ac76089feb9e14b8
+Author: Rishi Vhavle <rishivhavle21@gmail.com>
+Date:   Tue Feb 10 18:40:50 2026 +0530
+
+    feat: slim QR codes, cookie-based auth, and dashboard improvements
+    
+    - Reduce QR payload to orderId-only JWT (~80 chars vs ~300) for faster mobile scanning
+    - Add site-wide authentication with login page (admin/SIBI123)
+    - Replace PinGate dashboard auth with cookie-based JWT auth
+    - Add logout button to dashboard header
+    - Backend dashboard accepts both cookie and Bearer token auth
+    - Regenerate all 50 QR images with slim payloads
+---
+ be/scripts/reset-and-generate-qrs.ts | 20 +++++---------------
+ 1 file changed, 5 insertions(+), 15 deletions(-)
+
+diff --git a/be/scripts/reset-and-generate-qrs.ts b/be/scripts/reset-and-generate-qrs.ts
+index 0b21b4f..17b4298 100644
+--- a/be/scripts/reset-and-generate-qrs.ts
++++ b/be/scripts/reset-and-generate-qrs.ts
+@@ -14,18 +14,11 @@ const JWT_SECRET = "your_super_secret_jwt_key_change_in_production";
+ 
+ const convex = new ConvexHttpClient(CONVEX_URL);
+ 
+-function generateQRToken(data: {
+-  orderId: string;
+-  eventId: string;
+-  userId: string;
+-  quantity: number;
+-}): string {
+-  const payload = {
+-    ...data,
+-    issuedAt: Date.now(),
+-    expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+-  };
+-  return jwt.sign(payload, JWT_SECRET, { algorithm: "HS256" });
++function generateQRToken(data: { orderId: string }): string {
++  return jwt.sign({ orderId: data.orderId }, JWT_SECRET, {
++    algorithm: "HS256",
++    noTimestamp: true,
++  });
+ }
+ 
+ async function main() {
+@@ -58,9 +51,6 @@ async function main() {
+   for (const order of day1Data.day1Orders) {
+     const token = generateQRToken({
+       orderId: order.orderId,
+-      eventId: order.eventId,
+-      userId: order.userId,
+-      quantity: order.quantity,
+     });
+ 
+     const verified = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as any;
+
+commit 29b421e37ee6b1b54ca396199b492147f53e2573
+Author: Rishi Vhavle <rishivhavle21@gmail.com>
+Date:   Tue Feb 10 15:03:09 2026 +0530
+
+    feat: add clearAllData mutation and QR generation script
+---
+ be/scripts/reset-and-generate-qrs.ts | 93 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 93 insertions(+)
+
+diff --git a/be/scripts/reset-and-generate-qrs.ts b/be/scripts/reset-and-generate-qrs.ts
+new file mode 100644
+index 0000000..0b21b4f
+--- /dev/null
++++ b/be/scripts/reset-and-generate-qrs.ts
+@@ -0,0 +1,93 @@
++import { ConvexHttpClient } from "convex/browser";
++import { api } from "../convex/_generated/api.js";
++import jwt from "jsonwebtoken";
++import QRCode from "qrcode";
++import { mkdirSync, rmSync, existsSync } from "fs";
++import path from "path";
++import { fileURLToPath } from "url";
++
++const __dirname = path.dirname(fileURLToPath(import.meta.url));
++const QR_DIR = path.resolve(__dirname, "../../QRs");
++
++const CONVEX_URL = "https://honorable-nightingale-182.convex.cloud";
++const JWT_SECRET = "your_super_secret_jwt_key_change_in_production";
++
++const convex = new ConvexHttpClient(CONVEX_URL);
++
++function generateQRToken(data: {
++  orderId: string;
++  eventId: string;
++  userId: string;
++  quantity: number;
++}): string {
++  const payload = {
++    ...data,
++    issuedAt: Date.now(),
++    expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
++  };
++  return jwt.sign(payload, JWT_SECRET, { algorithm: "HS256" });
++}
++
++async function main() {
++  console.log("=== Step 1: Clearing all data ===");
++  const clearResult = await convex.mutation(api.orders.clearAllData, {});
++  console.log(
++    `Deleted: ${clearResult.deletedOrders} orders, ${clearResult.deletedScanLogs} scanLogs, ${clearResult.deletedUsers} users`
++  );
++
++  console.log("\n=== Step 2: Seeding fresh data ===");
++  const seedResult = await convex.mutation(api.users.seedVitopia, {});
++  console.log(
++    `Seeded: ${seedResult.day1Orders} Day1 orders, ${seedResult.day2Orders} Day2 orders`
++  );
++  console.log(`Day1 event: ${seedResult.day1EventId}`);
++  console.log(`Day2 event: ${seedResult.day2EventId}`);
++
++  console.log("\n=== Step 3: Fetching Day1 orders ===");
++  const day1Data = await convex.query(api.orders.listDay1Orders, {});
++  console.log(`Found ${day1Data.day1Orders.length} Day1 orders`);
++
++  console.log("\n=== Step 4: Generating QR codes ===");
++
++  if (existsSync(QR_DIR)) {
++    rmSync(QR_DIR, { recursive: true });
++  }
++  mkdirSync(path.join(QR_DIR, "unscanned"), { recursive: true });
++
++  let generated = 0;
++  for (const order of day1Data.day1Orders) {
++    const token = generateQRToken({
++      orderId: order.orderId,
++      eventId: order.eventId,
++      userId: order.userId,
++      quantity: order.quantity,
++    });
++
++    const verified = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as any;
++    if (verified.orderId !== order.orderId) {
++      console.error(`VERIFICATION FAILED for ${order.orderId}`);
++      continue;
++    }
++
++    const filename = `${order.orderId}.png`;
++    const filepath = path.join(QR_DIR, "unscanned", filename);
++
++    await QRCode.toFile(filepath, token, {
++      errorCorrectionLevel: "M",
++      margin: 2,
++      width: 400,
++      color: { dark: "#000000", light: "#ffffff" },
++    });
++
++    generated++;
++  }
++
++  console.log(`Generated ${generated} QR codes in ${QR_DIR}/unscanned/`);
++  console.log("\n=== Done! ===");
++  console.log("Send the QR PNGs from QRs/unscanned/ to your phone to test scanning.");
++}
++
++main().catch((err) => {
++  console.error("Script failed:", err);
++  process.exit(1);
++});

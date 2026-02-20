@@ -1,0 +1,110 @@
+{
+  "baseUrl": "http://127.0.0.1:3101",
+  "generatedAt": "2026-02-20T07:55:16.828717+00:00",
+  "notes": "Task 1 negative snapshots executed via curl using invalid/missing payload or auth conditions.",
+  "serverLogTail": "or event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\nStats error: TypeError: fetch failed\n    at node:internal/deps/undici/undici:15845:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async ConvexHttpClient.queryInner (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:310:22)\n    at async ConvexHttpClient.query (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:275:12)\n    at async Promise.all (index 1)\n    at async <anonymous> (/home/kaizen/opus-fest/be/src/routes/scan.ts:290:41) {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:3210\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {\n    errno: -111,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 3210\n  }\n}\nDashboard data error: TypeError: fetch failed\n    at node:internal/deps/undici/undici:15845:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async ConvexHttpClient.queryInner (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:310:22)\n    at async ConvexHttpClient.query (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:275:12)\n    at async <anonymous> (/home/kaizen/opus-fest/be/src/routes/dashboard.ts:115:18) {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:3210\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {\n    errno: -111,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 3210\n  }\n}\n",
+  "serverStarted": true,
+  "snapshots": [
+    {
+      "body": {
+        "code": "MISSING_GATE_ID",
+        "error": "Gate ID is required",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"qrCode\": \"x\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/scan/verify",
+      "method": "POST",
+      "name": "scan_verify_missing_gate",
+      "path": "/api/scan/verify",
+      "reason": "negative missing X-Gate-Id should trigger gate auth error",
+      "status": 401,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.711718+00:00"
+    },
+    {
+      "body": {
+        "code": "MISSING_GATE_ID",
+        "error": "Gate ID is required",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"qrCode\": \"x\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/scan/validate",
+      "method": "POST",
+      "name": "scan_validate_missing_gate",
+      "path": "/api/scan/validate",
+      "reason": "negative missing X-Gate-Id should trigger gate auth error",
+      "status": 401,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.724662+00:00"
+    },
+    {
+      "body": {
+        "error": "Missing required fields: email, name",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"email\": \"\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/users",
+      "method": "POST",
+      "name": "users_missing_required_fields",
+      "path": "/api/users",
+      "reason": "negative missing name/email contract",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.732789+00:00"
+    },
+    {
+      "body": {
+        "error": "Missing required fields: userId, eventId, quantity",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/orders",
+      "method": "POST",
+      "name": "orders_missing_required_fields",
+      "path": "/api/orders",
+      "reason": "negative missing userId/eventId/quantity contract",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.744111+00:00"
+    },
+    {
+      "body": {
+        "error": "Missing required fields",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"name\": \"OnlyName\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/events",
+      "method": "POST",
+      "name": "events_missing_required_fields",
+      "path": "/api/events",
+      "reason": "negative missing required event fields contract",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.753377+00:00"
+    },
+    {
+      "body": {
+        "attemptsRemaining": 4,
+        "error": "Incorrect PIN",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"pin\": \"000000\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/dashboard/auth",
+      "method": "POST",
+      "name": "dashboard_auth_wrong_pin",
+      "path": "/api/dashboard/auth",
+      "reason": "negative incorrect dashboard PIN",
+      "status": 401,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.762351+00:00"
+    },
+    {
+      "body": {
+        "error": "Authorization required",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/dashboard/data",
+      "method": "GET",
+      "name": "dashboard_data_unauthorized",
+      "path": "/api/dashboard/data",
+      "reason": "negative missing auth token/cookie",
+      "status": 401,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.769970+00:00"
+    }
+  ]
+}

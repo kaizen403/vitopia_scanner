@@ -1,0 +1,22 @@
+{
+  "verifyMissing": {
+    "status": 400,
+    "code": "MISSING_QR_CODE"
+  },
+  "validateMissing": {
+    "status": 400,
+    "code": "MISSING_QR_CODE"
+  },
+  "validateInvalid": {
+    "status": 400,
+    "code": "INVALID_QR"
+  },
+  "stats": {
+    "status": 200,
+    "success": true,
+    "data": {
+      "activeScans": 0,
+      "recentScansPerMinute": 0
+    }
+  }
+}

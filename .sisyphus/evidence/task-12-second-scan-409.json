@@ -1,0 +1,23 @@
+{
+  "statusEquivalent": 409,
+  "codeEquivalent": "ALREADY_USED",
+  "result": {
+    "success": false,
+    "reason": "already_used",
+    "checkedInAt": 1771582377943,
+    "checkedInBy": "gate-a",
+    "eventId": "9d074c48-8135-4a47-a661-8e6a00bbb544",
+    "order": {
+      "orderId": "ORD-MLUQENCF-7255GO",
+      "quantity": 1
+    },
+    "user": {
+      "name": "Task12 Scan User",
+      "email": "task12-scan-1771582377655@example.com"
+    },
+    "event": {
+      "name": "Task12 Scan Event",
+      "venue": "Gate Hall"
+    }
+  }
+}

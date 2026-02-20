@@ -1,0 +1,217 @@
+{
+  "baseUrl": "http://127.0.0.1:3101",
+  "generatedAt": "2026-02-20T07:55:16.828690+00:00",
+  "notes": "Task 1 happy/baseline snapshots executed via curl against local backend process with fixture payloads.",
+  "serverLogTail": "or event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\n[ioredis] Unhandled error event: Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)\nStats error: TypeError: fetch failed\n    at node:internal/deps/undici/undici:15845:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async ConvexHttpClient.queryInner (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:310:22)\n    at async ConvexHttpClient.query (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:275:12)\n    at async Promise.all (index 1)\n    at async <anonymous> (/home/kaizen/opus-fest/be/src/routes/scan.ts:290:41) {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:3210\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {\n    errno: -111,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 3210\n  }\n}\nDashboard data error: TypeError: fetch failed\n    at node:internal/deps/undici/undici:15845:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async ConvexHttpClient.queryInner (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:310:22)\n    at async ConvexHttpClient.query (/home/kaizen/opus-fest/node_modules/.pnpm/convex@1.31.4_react@19.2.3/node_modules/convex/src/browser/http_client.ts:275:12)\n    at async <anonymous> (/home/kaizen/opus-fest/be/src/routes/dashboard.ts:115:18) {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:3210\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {\n    errno: -111,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 3210\n  }\n}\n",
+  "serverStarted": true,
+  "snapshots": [
+    {
+      "body": {
+        "error": "Failed to fetch events",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/events",
+      "method": "GET",
+      "name": "events_list",
+      "path": "/api/events",
+      "reason": "baseline list active events",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.488989+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to fetch event",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/events/event_demo",
+      "method": "GET",
+      "name": "events_get_by_id",
+      "path": "/api/events/event_demo",
+      "reason": "baseline fetch event by id fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.506440+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to fetch stats",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/events/event_demo/stats",
+      "method": "GET",
+      "name": "events_stats",
+      "path": "/api/events/event_demo/stats",
+      "reason": "baseline stats fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.518809+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to create user",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"email\": \"fixture@example.com\", \"name\": \"Fixture User\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/users",
+      "method": "POST",
+      "name": "users_create_or_get",
+      "path": "/api/users",
+      "reason": "baseline create/get user fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.553279+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to fetch user",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/users/user_demo",
+      "method": "GET",
+      "name": "users_get_by_id",
+      "path": "/api/users/user_demo",
+      "reason": "baseline get user by id fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.566702+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to fetch user orders",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/users/user_demo/orders",
+      "method": "GET",
+      "name": "users_get_orders",
+      "path": "/api/users/user_demo/orders",
+      "reason": "baseline get user orders fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.578415+00:00"
+    },
+    {
+      "body": {
+        "error": "fetch failed",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"userId\": \"user_demo\", \"eventId\": \"event_demo\", \"quantity\": 1} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/orders",
+      "method": "POST",
+      "name": "orders_create",
+      "path": "/api/orders",
+      "reason": "baseline create order fixture",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.592367+00:00"
+    },
+    {
+      "body": {
+        "error": "fetch failed",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/orders/order_demo/pay",
+      "method": "POST",
+      "name": "orders_pay",
+      "path": "/api/orders/order_demo/pay",
+      "reason": "baseline pay order fixture",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.608965+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to fetch order",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/orders/order_demo",
+      "method": "GET",
+      "name": "orders_get",
+      "path": "/api/orders/order_demo",
+      "reason": "baseline get order fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.625606+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to generate QR code",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/orders/order_demo/qr",
+      "method": "GET",
+      "name": "orders_get_qr",
+      "path": "/api/orders/order_demo/qr",
+      "reason": "baseline get QR fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:06.641419+00:00"
+    },
+    {
+      "body": null,
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -H X-Gate-Id: gate-a -d {\"qrCode\": \"fixture.invalid.qr\", \"eventId\": \"event_demo\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/scan/verify",
+      "method": "POST",
+      "name": "scan_verify_with_gate",
+      "path": "/api/scan/verify",
+      "reason": "baseline verify fixture with gate headers",
+      "status": 0,
+      "stderr": "curl: (28) Operation timed out after 10002 milliseconds with 0 bytes received",
+      "timestamp": "2026-02-20T07:55:16.654185+00:00"
+    },
+    {
+      "body": {
+        "code": "INVALID_QR",
+        "error": "Invalid QR",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -H X-Gate-Id: gate-a -d {\"qrCode\": \"fixture.invalid.qr\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/scan/validate",
+      "method": "POST",
+      "name": "scan_validate_with_gate",
+      "path": "/api/scan/validate",
+      "reason": "baseline validate fixture with gate headers",
+      "status": 400,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.664145+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to get statistics",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/scan/stats/event_demo",
+      "method": "GET",
+      "name": "scan_stats",
+      "path": "/api/scan/stats/event_demo",
+      "reason": "baseline scan stats fixture",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.675810+00:00"
+    },
+    {
+      "body": {
+        "success": true,
+        "token": "109fd51b-3885-451f-bfe9-752f6a65f82a"
+      },
+      "command": "curl -sS -m 10 -X POST -H Content-Type: application/json -d {\"pin\": \"260226\"} -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/dashboard/auth",
+      "method": "POST",
+      "name": "dashboard_auth",
+      "path": "/api/dashboard/auth",
+      "reason": "baseline dashboard auth with configured pin",
+      "status": 200,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.690438+00:00"
+    },
+    {
+      "body": {
+        "error": "Failed to load dashboard data",
+        "success": false
+      },
+      "command": "curl -sS -m 10 -X GET -H Authorization: Bearer 109fd51b-3885-451f-bfe9-752f6a65f82a -w \n__STATUS__:%{http_code} http://127.0.0.1:3101/api/dashboard/data",
+      "method": "GET",
+      "name": "dashboard_data_with_token",
+      "path": "/api/dashboard/data",
+      "reason": "baseline dashboard data with bearer token from previous auth call",
+      "status": 500,
+      "stderr": null,
+      "timestamp": "2026-02-20T07:55:16.703126+00:00"
+    }
+  ]
+}
