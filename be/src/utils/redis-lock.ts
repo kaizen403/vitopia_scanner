@@ -59,12 +59,17 @@ export class RedisLockManager {
    * Check if a ticket is cached as already used/invalid
    * This provides fast rejection without hitting the database
    */
-  async getCachedScanResult(orderId: string): Promise<{
+  private getScanCacheKey(orderId: string, eventId?: string): string {
+    const scope = eventId && eventId.trim() !== "" ? eventId : "all";
+    return `${SCAN_CACHE_PREFIX}${orderId}:${scope}`;
+  }
+
+  async getCachedScanResult(orderId: string, eventId?: string): Promise<{
     cached: boolean;
     result?: "already_used" | "invalid" | "not_found";
     checkedInAt?: number;
   }> {
-    const cacheKey = `${SCAN_CACHE_PREFIX}${orderId}`;
+    const cacheKey = this.getScanCacheKey(orderId, eventId);
     const cached = await this.redis.get(cacheKey);
     
     if (cached) {
@@ -85,9 +90,10 @@ export class RedisLockManager {
   async cacheScanResult(
     orderId: string,
     result: "already_used" | "invalid" | "not_found",
-    checkedInAt?: number
+    checkedInAt?: number,
+    eventId?: string
   ): Promise<void> {
-    const cacheKey = `${SCAN_CACHE_PREFIX}${orderId}`;
+    const cacheKey = this.getScanCacheKey(orderId, eventId);
     const data = JSON.stringify({ result, checkedInAt });
     await this.redis.setex(cacheKey, SCAN_CACHE_TTL, data);
   }
@@ -96,8 +102,11 @@ export class RedisLockManager {
    * Invalidate cache for a ticket (e.g., after successful check-in)
    */
   async invalidateCache(orderId: string): Promise<void> {
-    const cacheKey = `${SCAN_CACHE_PREFIX}${orderId}`;
-    await this.redis.del(cacheKey);
+    const pattern = `${SCAN_CACHE_PREFIX}${orderId}:*`;
+    const keys = await this.redis.keys(pattern);
+    if (keys.length > 0) {
+      await this.redis.del(...keys);
+    }
   }
 
   /**

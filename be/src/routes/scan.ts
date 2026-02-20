@@ -1,25 +1,11 @@
 import { Router, Request, Response } from "express";
-import { ConvexHttpClient } from "convex/browser";
 import { getRedisLockManager } from "../utils/redis-lock.js";
 import { verifyQRCode } from "../utils/qr-code.js";
 import { gateAuthMiddleware, rateLimitMiddleware } from "../middleware/auth.js";
-import { loadConvexApi } from "../utils/convex-api.js";
+import { checkIn, validate, getStats as dbGetStats, logScan } from "../db/scan.js";
+import { getByOrderId } from "../db/orders.js";
 
 const router: Router = Router();
-
-// Lazy-load Convex client (env vars not available at import time)
-let _convex: ConvexHttpClient | null = null;
-const getConvex = () => {
-  if (!_convex) {
-    const url = process.env.CONVEX_URL;
-    if (!url) throw new Error("CONVEX_URL environment variable is required");
-    _convex = new ConvexHttpClient(url);
-  }
-  return _convex;
-};
-
-// Helper to get Convex API - dynamically loaded after convex dev generates types
-const getApi = async () => loadConvexApi();
 
 /**
  * POST /api/scan/verify
@@ -46,8 +32,6 @@ router.post(
     const lockManager = getRedisLockManager();
 
     try {
-      const api = await getApi();
-      
       // Step 1: Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
@@ -62,12 +46,12 @@ router.post(
       const { orderId } = qrResult.payload;
 
       // Step 2: Check Redis cache for fast rejection
-      const cachedResult = await lockManager.getCachedScanResult(orderId);
+      const cachedResult = await lockManager.getCachedScanResult(orderId, eventId);
       if (cachedResult.cached && cachedResult.result === "already_used") {
         // Fetch user/order data for rejected entry display
         let data: any = { orderId };
         try {
-          const orderInfo = await getConvex().query(api.orders.getByOrderId, { orderId });
+          const orderInfo = await getByOrderId(orderId);
           if (orderInfo) {
             data = {
               orderId: orderInfo.orderId,
@@ -102,24 +86,24 @@ router.post(
       }
 
       try {
-        // Step 5: Perform check-in in Convex (includes event-match check)
-        const result = await getConvex().mutation(api.orders.checkIn, {
+        // Step 5: Perform check-in in Postgres
+        const result = await checkIn({
           orderId,
           scannedBy: gate.id,
           gate: gate.id,
-          expectedEventId: eventId ? eventId as any : undefined,
+          expectedEventId: eventId,
         });
 
         // Step 6: Update cache and log
         if (result.success) {
-          await lockManager.cacheScanResult(orderId, "already_used", Date.now());
+          await lockManager.cacheScanResult(orderId, "already_used", Date.now(), eventId);
           if (result.eventId) {
             await lockManager.incrementScanCount(result.eventId);
           }
 
-          await getConvex().mutation(api.orders.logScan, {
+          await logScan({
             orderId,
-            eventId: result.eventId as any,
+            eventId: result.eventId,
             scanResult: "success",
             scannedBy: gate.id,
             gate: gate.id,
@@ -131,44 +115,48 @@ router.post(
             success: true,
             message: "Entry allowed",
             code: "VALID",
-            data: {
-              orderId: result.order?.orderId,
-              quantity: result.order?.quantity,
-              user: result.user,
-              event: result.event,
-            },
-            responseTime: Date.now() - startTime,
-          });
-        } else {
+          data: {
+            ...result.order,
+            user: result.user,
+            event: result.event,
+          },
+          responseTime: Date.now() - startTime,
+        });
+      } else {
           // Cache invalid results
           if (result.reason === "already_used") {
             await lockManager.cacheScanResult(
               orderId,
               "already_used",
-              result.checkedInAt
+              result.checkedInAt || Date.now(),
+              eventId
             );
           }
 
-          await getConvex().mutation(api.orders.logScan, {
-            orderId,
-            eventId: result.eventId as any,
-            scanResult: result.reason as any,
-            scannedBy: gate.id,
-            gate: gate.id,
-            ipAddress: req.ip,
-            userAgent: req.headers["user-agent"],
-          });
+          if (result.eventId) {
+            await logScan({
+              orderId,
+              eventId: result.eventId,
+              scanResult: result.reason as any,
+              scannedBy: gate.id,
+              gate: gate.id,
+              ipAddress: req.ip,
+              userAgent: req.headers["user-agent"],
+            });
+          }
 
           const errorMessages: Record<string, string> = {
             already_used: "Already scanned",
             not_found: "Not found",
             not_paid: "Not paid",
+            wrong_event: "Wrong event",
           };
 
           const statusCodes: Record<string, number> = {
             already_used: 409,
             not_found: 404,
             not_paid: 402,
+            wrong_event: 400,
           };
 
           res.status(statusCodes[result.reason] || 400).json({
@@ -178,8 +166,7 @@ router.post(
             checkedInAt: result.checkedInAt,
             checkedInBy: result.checkedInBy,
             data: {
-              orderId: result.order?.orderId,
-              quantity: result.order?.quantity,
+              ...result.order,
               user: result.user,
               event: result.event,
             },
@@ -210,7 +197,7 @@ router.post(
   "/validate",
   gateAuthMiddleware,
   async (req: Request, res: Response) => {
-    const { qrCode } = req.body;
+    const { qrCode, eventId } = req.body;
 
     if (!qrCode) {
       res.status(400).json({
@@ -222,8 +209,6 @@ router.post(
     }
 
     try {
-      const api = await getApi();
-      
       // Verify QR code signature
       const qrResult = verifyQRCode(qrCode);
       if (!qrResult.valid || !qrResult.payload) {
@@ -237,8 +222,8 @@ router.post(
 
       const { orderId } = qrResult.payload;
 
-      // Check with Convex
-      const result = await getConvex().query(api.orders.validate, { orderId });
+      // Check with Postgres
+      const result = await validate(orderId, eventId);
 
       if (result.valid) {
         res.json({
@@ -246,8 +231,7 @@ router.post(
           message: "Ticket is valid",
           code: "VALID",
           data: {
-            orderId: result.order?.orderId,
-            quantity: result.order?.quantity,
+            ...result.order,
             user: result.user,
             event: result.event,
           },
@@ -257,6 +241,7 @@ router.post(
           already_used: 409,
           not_found: 404,
           not_paid: 402,
+          wrong_event: 400,
         };
 
         res.status(statusCodes[result.reason] || 400).json({
@@ -285,11 +270,10 @@ router.get("/stats/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
 
   try {
-    const api = await getApi();
     const lockManager = getRedisLockManager();
     const [realtimeStats, eventStats] = await Promise.all([
       lockManager.getRealtimeStats(eventId),
-      getConvex().query(api.events.getStats, { eventId: eventId as any }),
+      dbGetStats(eventId),
     ]);
 
     res.json({
