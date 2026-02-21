@@ -697,10 +697,7 @@ export default function Home() {
                     }}
                     className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-4 text-left flex items-center justify-between focus:outline-none focus:border-[#9AE600]/50 focus:ring-1 focus:ring-[#9AE600]/30 transition-all"
                   >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-[#9AE600]" />
-                      <span className="text-base text-[#99A1AF]">Carnival Activities</span>
-                    </div>
+                    <span className="text-base text-[#99A1AF]">Non-prime events</span>
                     <ChevronDown className={`w-5 h-5 text-[#9AE600] transition-transform ${carnivalDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
