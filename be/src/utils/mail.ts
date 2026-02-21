@@ -52,17 +52,16 @@ export function buildEmailHtml(data: TicketEmailData): string {
           <!-- Branding Header -->
           <tr>
             <td style="padding:48px 40px 32px;text-align:center;background:linear-gradient(180deg, #181818 0%, #111111 100%);">
-              <div style="font-size:11px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#9AE600;margin-bottom:20px;opacity:0.9;">VIT-AP University Presents</div>
               <img src="cid:logo" alt="VITopia '26" style="width:170px;height:auto;display:block;margin:0 auto;" />
             </td>
           </tr>
 
           <!-- Hero Section -->
           <tr>
-            <td style="padding:0 40px 40px;">
-              <div style="text-align:center;padding:32px;background:rgba(154,230,0,0.03);border:1px dashed rgba(154,230,0,0.2);border-radius:24px;">
-                <h2 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;">Registration Confirmed</h2>
-                <p style="margin:0;font-size:15px;color:#a0a0a0;line-height:1.5;">Hi ${data.name}, you're all set! Below is your official pass to the event. Please present this at the entry gate.</p>
+            <td style="padding:0 40px 32px;">
+              <div style="text-align:center;padding:36px 32px;background:rgba(154,230,0,0.04);border:1px dashed rgba(154,230,0,0.2);border-radius:24px;">
+                <h2 style="margin:0 0 10px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Confirmed, ${data.name.split(' ')[0]}.</h2>
+                <p style="margin:0;font-size:16px;color:#a0a0a0;line-height:1.6;max-width:300px;margin-left:auto;margin-right:auto;">Just show this at entry and you're solid.</p>
               </div>
             </td>
           </tr>
@@ -133,10 +132,6 @@ export function buildEmailHtml(data: TicketEmailData): string {
                 </tr>
                 <tr>
                   <td style="padding-bottom:12px;vertical-align:top;width:20px;">•</td>
-                  <td style="padding-bottom:12px;"><strong>Valid ID Required:</strong> University ID or Govt ID is mandatory at entry along with this ticket.</td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom:12px;vertical-align:top;width:20px;">•</td>
                   <td style="padding-bottom:12px;"><strong>Strict Access:</strong> One pass per entry. Management reserves the right to frisk attendees for security.</td>
                 </tr>
                 <tr>
@@ -160,7 +155,7 @@ export function buildEmailHtml(data: TicketEmailData): string {
             <td style="padding:40px;text-align:center;border-top:1px solid #1a1a1a;background-color:#0a0a0a;">
               <p style="margin:0;font-size:13px;color:#555555;">
                 VIT-AP University · Amaravati, Andhra Pradesh · 522237<br />
-                Questions? Visit <a href="https://vitopia.vitap.ac.in" style="color:#9AE600;text-decoration:none;">vitopia.vitap.ac.in</a>
+                Questions? Contact <a href="mailto:rishi.23bce8982@vitapstudent.ac.in" style="color:#9AE600;text-decoration:none;">rishi.23bce8982@vitapstudent.ac.in</a>
               </p>
             </td>
           </tr>

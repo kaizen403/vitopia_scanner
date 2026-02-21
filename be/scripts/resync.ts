@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { syncRegistrations } from "../src/jobs/vtopiaSync.js";
 
 async function main() {

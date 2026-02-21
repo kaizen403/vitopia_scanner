@@ -1,7 +1,8 @@
+import "dotenv/config";
 import { prisma } from "../src/db/prisma.js";
 
 async function seed() {
-    const eventId = "8e23810b-6e72-4b4c-99b7-549b7d9e6053";
+    const eventId = "e1776439-8663-4c9a-9592-f1351eda5c70";
     const now = BigInt(Date.now());
     const commonSecret = "v2026";
 
