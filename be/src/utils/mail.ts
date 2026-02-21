@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 import * as ordersRepo from "../db/orders.js";
 import { generateQRCode } from "./qr-code.js";
 import { generateStyledQRImage } from "./qr-image.js";
@@ -148,30 +149,33 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
   const qrToken = generateQRCode({ orderId: order.orderId });
   const qrBuffer = await generateStyledQRImage(qrToken);
 
-  // Load logo
+  // Load logo and convert to WebP
   const logoPath = path.join(__dirname, "../assets/vitopia.png");
   let logoBuffer: Buffer | null = null;
   try {
-    logoBuffer = fs.readFileSync(logoPath);
+    const rawLogo = fs.readFileSync(logoPath);
+    logoBuffer = await sharp(rawLogo).webp({ quality: 90 }).toBuffer();
   } catch (e) {
-    console.warn("Could not read vitopia.png logo for email", e);
+    console.warn("Could not read/convert vitopia.png logo for email", e);
   }
 
   const attachments: any[] = [
     {
-      filename: `ticket-${order.orderId}.png`,
+      filename: "ticket.webp",
       content: qrBuffer,
-      contentType: "image/png",
+      contentType: "image/webp",
       contentId: "qrcode",
+      contentDisposition: "inline",
     },
   ];
 
   if (logoBuffer) {
     attachments.push({
-      filename: "vitopia.png",
+      filename: "logo.webp",
       content: logoBuffer,
-      contentType: "image/png",
+      contentType: "image/webp",
       contentId: "logo",
+      contentDisposition: "inline",
     });
   }
 

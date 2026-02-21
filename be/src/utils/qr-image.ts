@@ -7,13 +7,13 @@ import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOGO_PATH = join(__dirname, "../assets/vitopia.png");
 
-const BG_COLOR   = "#FFFFFF";
-const MODULE_PX  = 22;   // pixels per QR module
+const BG_COLOR = "#FFFFFF";
+const MODULE_PX = 22;   // pixels per QR module
 const DOT_RADIUS = 4;    // rounded corner radius
 
 // Red → orange gradient (pulled from VITopia logo palette)
-const GRAD_START = { r: 180, g: 10,  b: 0  };
-const GRAD_END   = { r: 200, g: 100, b: 0   };
+const GRAD_START = { r: 180, g: 10, b: 0 };
+const GRAD_END = { r: 200, g: 100, b: 0 };
 
 // Logo occupies 28% of QR width — safe with ERROR_CORRECT_H (30% damage tolerance)
 const LOGO_RATIO = 0.18;
@@ -134,17 +134,17 @@ export async function generateStyledQRImage(qrToken: string): Promise<Buffer> {
     `</svg>`,
   ].join("\n");
 
-  // ── Render SVG → PNG, composite logo on top ──
-  const basePng = await sharp(Buffer.from(svg)).png().toBuffer();
+  // ── Render SVG → WebP, composite logo on top ──
+  const baseWebp = await sharp(Buffer.from(svg)).webp({ quality: 90 }).toBuffer();
 
-  return sharp(basePng)
+  return sharp(baseWebp)
     .composite([{ input: logoPng, left: bx, top: by, blend: "over" }])
-    .png()
+    .webp({ quality: 90 })
     .toBuffer();
 }
 
-/** Returns a base64 data URL of the styled QR PNG (for email attachments). */
+/** Returns a base64 data URL of the styled QR WebP (for email attachments). */
 export async function generateStyledQRDataUrl(qrToken: string): Promise<string> {
   const buf = await generateStyledQRImage(qrToken);
-  return `data:image/png;base64,${buf.toString("base64")}`;
+  return `data:image/webp;base64,${buf.toString("base64")}`;
 }
