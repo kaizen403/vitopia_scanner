@@ -70,18 +70,26 @@ export default function ScannerPage() {
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const [gateId, setGateId] = useState("gate-1");
+  const [gateSecret, setGateSecret] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [events, setEvents] = useState<Event[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [scanCount, setScanCount] = useState({ success: 0, failed: 0 });
+  const [scannerInfo, setScannerInfo] = useState<{ name: string; gender: string } | null>(null);
   const lastScannedRef = useRef<string>("");
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const orderedEvents = useMemo(() => sortEventsForScanner(events), [events]);
 
-  // Load events on mount
+  // Load events and credentials on mount
   useEffect(() => {
     loadEvents();
+
+    const storedGateId = localStorage.getItem("gateId");
+    const storedGateSecret = localStorage.getItem("gateSecret");
+
+    if (storedGateId) setGateId(storedGateId);
+    if (storedGateSecret) setGateSecret(storedGateSecret);
   }, []);
 
   async function loadEvents() {
@@ -157,14 +165,14 @@ export default function ScannerPage() {
     } catch {
       // Silently fail - will retry on next frame
     }
-  }, [scanning, gateId, selectedEventId]);
+  }, [scanning, gateId, gateSecret, selectedEventId]);
 
   // Handle detected QR code
   const handleQRCodeDetected = async (qrCode: string) => {
     setStatus("scanning");
 
     try {
-      const result = await verifyTicket(qrCode, gateId, selectedEventId || undefined);
+      const result = await verifyTicket(qrCode, gateId, gateSecret, selectedEventId || undefined);
       setLastResult(result);
 
       if (result.success) {
@@ -299,9 +307,8 @@ export default function ScannerPage() {
             </button>
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                showSettings ? "bg-[#9AE600] text-black" : "bg-[#1a1a1a] text-[#99A1AF] hover:text-white"
-              }`}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${showSettings ? "bg-[#9AE600] text-black" : "bg-[#1a1a1a] text-[#99A1AF] hover:text-white"
+                }`}
             >
               Settings
             </button>
@@ -318,9 +325,25 @@ export default function ScannerPage() {
               <input
                 type="text"
                 value={gateId}
-                onChange={(e) => setGateId(e.target.value)}
+                onChange={(e) => {
+                  setGateId(e.target.value);
+                  localStorage.setItem("gateId", e.target.value);
+                }}
                 className="w-full px-4 py-2 bg-black border border-[#1a1a1a] rounded-lg text-white focus:border-[#9AE600] focus:outline-none transition-colors"
                 placeholder="Enter gate identifier"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-[#99A1AF] mb-2">Gate Secret</label>
+              <input
+                type="password"
+                value={gateSecret}
+                onChange={(e) => {
+                  setGateSecret(e.target.value);
+                  localStorage.setItem("gateSecret", e.target.value);
+                }}
+                className="w-full px-4 py-2 bg-black border border-[#1a1a1a] rounded-lg text-white focus:border-[#9AE600] focus:outline-none transition-colors"
+                placeholder="Enter gate secret"
               />
             </div>
             <div>
@@ -375,13 +398,12 @@ export default function ScannerPage() {
           {/* Status Overlay */}
           {status !== "idle" && status !== "scanning" && (
             <div
-              className={`absolute inset-0 flex flex-col items-center justify-center ${
-                status === "success"
+              className={`absolute inset-0 flex flex-col items-center justify-center ${status === "success"
                   ? "bg-[#9AE600]/90"
                   : status === "already_used"
-                  ? "bg-yellow-500/90"
-                  : "bg-red-500/90"
-              }`}
+                    ? "bg-yellow-500/90"
+                    : "bg-red-500/90"
+                }`}
             >
               {status === "success" ? (
                 <CheckCircle className="w-24 h-24 mb-4 text-black animate-pulse-success" />
@@ -394,8 +416,8 @@ export default function ScannerPage() {
                 {status === "success"
                   ? "ENTRY ALLOWED"
                   : status === "already_used"
-                  ? "ALREADY SCANNED"
-                  : "ENTRY DENIED"}
+                    ? "ALREADY SCANNED"
+                    : "ENTRY DENIED"}
               </h2>
               {lastResult?.data && (
                 <div className={`text-center ${status === "success" || status === "already_used" ? "text-black/80" : "text-white/80"}`}>

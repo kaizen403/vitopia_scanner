@@ -27,6 +27,10 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
+        if (data.role === "scanner") {
+          localStorage.setItem("gateId", data.gateId);
+          localStorage.setItem("gateSecret", password);
+        }
         router.push("/");
         router.refresh();
       } else {

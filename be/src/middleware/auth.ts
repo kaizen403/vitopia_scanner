@@ -10,7 +10,7 @@ export function rateLimitMiddleware(maxPerMinute: number = 100) {
     const lockManager = getRedisLockManager();
 
     const isLimited = await lockManager.isRateLimited(gateId, maxPerMinute);
-    
+
     if (isLimited) {
       res.status(429).json({
         success: false,
@@ -25,27 +25,55 @@ export function rateLimitMiddleware(maxPerMinute: number = 100) {
   };
 }
 
+import { prisma as basePrisma } from "../db/prisma.js";
+const prisma = basePrisma as any;
+
 /**
  * Gate authentication middleware
  */
-export function gateAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function gateAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const gateId = req.headers["x-gate-id"] as string;
   const gateSecret = req.headers["x-gate-secret"] as string;
 
-  // In production, verify gate credentials against database
-  // For now, just check if headers are present
-  if (!gateId) {
+  if (!gateId || !gateSecret) {
     res.status(401).json({
       success: false,
-      error: "Gate ID is required",
-      code: "MISSING_GATE_ID",
+      error: "Gate ID and Secret are required",
+      code: "MISSING_GATE_CREDENTIALS",
     });
     return;
   }
 
-  // Attach gate info to request
-  (req as any).gate = { id: gateId, secret: gateSecret };
-  next();
+  try {
+    const gate = await prisma.gate.findUnique({
+      where: { gateId },
+    });
+
+    if (!gate || gate.secret !== gateSecret) {
+      res.status(401).json({
+        success: false,
+        error: "Invalid gate credentials",
+        code: "INVALID_GATE_CREDENTIALS",
+      });
+      return;
+    }
+
+    if (!gate.isActive) {
+      res.status(403).json({
+        success: false,
+        error: "Gate is inactive",
+        code: "GATE_INACTIVE",
+      });
+      return;
+    }
+
+    // Attach gate info to request
+    (req as any).gate = { id: gate.gateId, name: gate.name, gender: gate.gender };
+    next();
+  } catch (err) {
+    console.error("Gate auth error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
 }
 
 /**

@@ -175,6 +175,7 @@ export interface ScanResult {
 export async function verifyTicket(
   qrCode: string,
   gateId: string,
+  gateSecret: string,
   eventId?: string
 ): Promise<ScanResult> {
   const response = await fetch(`${API_URL}/api/scan/verify`, {
@@ -182,6 +183,7 @@ export async function verifyTicket(
     headers: {
       "Content-Type": "application/json",
       "X-Gate-Id": gateId,
+      "X-Gate-Secret": gateSecret,
     },
     body: JSON.stringify({ qrCode, eventId }),
   });
@@ -191,13 +193,15 @@ export async function verifyTicket(
 
 export async function validateTicket(
   qrCode: string,
-  gateId: string
+  gateId: string,
+  gateSecret: string
 ): Promise<ScanResult> {
   const response = await fetch(`${API_URL}/api/scan/validate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Gate-Id": gateId,
+      "X-Gate-Secret": gateSecret,
     },
     body: JSON.stringify({ qrCode }),
   });
@@ -252,13 +256,15 @@ export interface TicketHistoryResponse {
 
 export async function lookupTicketHistory(
   qrCode: string,
-  gateId: string
+  gateId: string,
+  gateSecret: string
 ): Promise<TicketHistoryResponse> {
   const response = await fetch(`${API_URL}/api/scan/history`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Gate-Id": gateId,
+      "X-Gate-Secret": gateSecret,
     },
     body: JSON.stringify({ qrCode }),
   });

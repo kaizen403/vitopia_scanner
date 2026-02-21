@@ -135,8 +135,11 @@ model ScanLog {
 
 model Gate {
   id        String  @id @default(uuid()) @db.Uuid
+  convexId  String? @unique @map("convex_id")
   gateId    String  @unique @map("gate_id")
   name      String
+  secret    String  @default("vitopia2026")
+  gender    String  @default("M") // M or F
   eventId   String  @map("event_id") @db.Uuid
   isActive  Boolean @map("is_active")
   createdAt BigInt  @map("created_at")
