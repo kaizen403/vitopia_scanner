@@ -167,6 +167,8 @@ export default function Home() {
   const resumeMainScanRef = useRef<boolean>(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [carnivalDropdownOpen, setCarnivalDropdownOpen] = useState(false);
+  const carnivalDropdownRef = useRef<HTMLDivElement>(null);
 
   const verifiedScans = scanHistory.filter((s) => s.status === "success");
   const rejectedScans = scanHistory.filter((s) => s.status === "failed");
