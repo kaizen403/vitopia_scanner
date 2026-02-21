@@ -145,6 +145,7 @@ export default function Home() {
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const gateId = "gate-1";
+  const [gateSecret, setGateSecret] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,9 +189,11 @@ export default function Home() {
 
   useEffect(() => {
     const token = localStorage.getItem("gateId");
+    const secret = localStorage.getItem("gateSecret");
     if (!token) {
       router.push("/login");
     } else {
+      if (secret) setGateSecret(secret);
       setHasAccess(true);
     }
   }, [router]);
@@ -316,7 +319,7 @@ export default function Home() {
       setHistoryError("");
 
       try {
-        const result = await lookupTicketHistory(qrCode, gateId);
+        const result = await lookupTicketHistory(qrCode, gateId, gateSecret);
         if (result.success && result.data) {
           setHistoryResult(result.data);
           setHistoryStatus("success");
@@ -334,7 +337,7 @@ export default function Home() {
         stopHistoryCamera(false);
       }
     },
-    [stopHistoryCamera]
+    [stopHistoryCamera, gateSecret]
   );
 
   const openHistoryModal = useCallback(() => {
@@ -403,7 +406,7 @@ export default function Home() {
       setStatus("scanning");
 
       try {
-        const result = await verifyTicket(qrCode, gateId, selectedEvent?.id || undefined);
+        const result = await verifyTicket(qrCode, gateId, gateSecret, selectedEvent?.id);
         setLastResult(result);
 
         const record: ScanRecord = {
@@ -444,7 +447,7 @@ export default function Home() {
         playSound("error");
       }
     },
-    [playSound, selectedEvent?.id]
+    [playSound, selectedEvent?.id, gateSecret]
   );
 
   useEffect(() => {
