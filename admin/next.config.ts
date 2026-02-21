@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  turbopack: {
-    root: "/home/kaizen/opus-fest",
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

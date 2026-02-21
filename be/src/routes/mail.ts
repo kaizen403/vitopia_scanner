@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { Resend } from "resend";
 import * as ordersRepo from "../db/orders.js";
 import { generateQRCode } from "../utils/qr-code.js";
-import QRCode from "qrcode";
+import { generateStyledQRImage } from "../utils/qr-image.js";
 
 const router: Router = Router();
 
@@ -45,12 +45,8 @@ router.post("/send", async (req: Request, res: Response) => {
       }
 
       const qrToken = generateQRCode({ orderId: order.orderId });
-      const qrDataUrl = await QRCode.toDataURL(qrToken, {
-        width: 400,
-        margin: 2,
-        color: { dark: "#000000", light: "#FFFFFF" },
-      });
-      const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+      const qrBuffer = await generateStyledQRImage(qrToken);
+      const qrBase64 = qrBuffer.toString("base64");
 
       const { error: sendError } = await getResend().emails.send({
         from: FROM_EMAIL,

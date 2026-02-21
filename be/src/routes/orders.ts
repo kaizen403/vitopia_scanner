@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { generateQRCode } from "../utils/qr-code.js";
+import { generateStyledQRImage, generateStyledQRDataUrl } from "../utils/qr-image.js";
 import * as ordersRepo from "../db/orders.js";
 
 const router: Router = Router();
@@ -173,6 +174,38 @@ router.get("/:orderId/qr", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error generating QR:", error);
     res.status(500).json({ success: false, error: "Failed to generate QR code" });
+  }
+});
+
+/**
+ * GET /api/orders/:orderId/qr-image
+ * Returns the styled VITopia QR code as a PNG image (for display & email).
+ * Token/auth logic is identical — only the visual rendering is styled.
+ */
+router.get("/:orderId/qr-image", async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+
+  try {
+    const order = await ordersRepo.getByOrderId(orderId);
+    if (!order) {
+      res.status(404).json({ success: false, error: "Order not found" });
+      return;
+    }
+
+    if (order.paymentStatus !== "paid") {
+      res.status(400).json({ success: false, error: "Order is not paid." });
+      return;
+    }
+
+    const qrToken = generateQRCode({ orderId: order.orderId });
+    const pngBuffer = await generateStyledQRImage(qrToken);
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(pngBuffer);
+  } catch (error) {
+    console.error("Error generating styled QR image:", error);
+    res.status(500).json({ success: false, error: "Failed to generate QR image" });
   }
 });
 

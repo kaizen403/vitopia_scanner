@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import QRCode from "qrcode";
 import {
   ArrowLeft,
   Calendar,
@@ -21,7 +20,6 @@ export default function TicketPage({
   const { orderId } = use(params);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrder();
@@ -32,24 +30,16 @@ export default function TicketPage({
     try {
       const data = await getOrder(orderId);
       setOrder(data);
-
-      if (data?.qrCode) {
-        const dataUrl = await QRCode.toDataURL(data.qrCode, {
-          width: 280,
-          margin: 2,
-          color: {
-            dark: "#000000",
-            light: "#ffffff",
-          },
-        });
-        setQrDataUrl(dataUrl);
-      }
     } catch (error) {
       console.error("Failed to load order:", error);
     } finally {
       setLoading(false);
     }
   }
+
+  // Styled QR image served directly from backend
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  const qrImageUrl = `${API_BASE}/api/orders/${orderId}/qr-image`;
 
   if (loading) {
     return (
@@ -141,10 +131,14 @@ export default function TicketPage({
                   </p>
                 )}
               </div>
-            ) : order.paymentStatus === "paid" && qrDataUrl ? (
+            ) : order.paymentStatus === "paid" ? (
               <>
-                <div className="bg-white p-4 rounded-lg shadow-inner">
-                  <img src={qrDataUrl} alt="Ticket QR Code" className="w-64 h-64" />
+                <div className="bg-[#0A0A0A] p-4 rounded-xl shadow-inner">
+                  <img
+                    src={qrImageUrl}
+                    alt="Ticket QR Code"
+                    className="w-64 h-64 rounded-lg"
+                  />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
                   Show this QR code at the entry gate

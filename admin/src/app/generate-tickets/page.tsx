@@ -329,11 +329,11 @@ export default function GenerateTicketsPage() {
                   className="bg-[#111] border border-[#333] rounded-lg p-4 flex flex-col sm:flex-row items-start gap-4"
                 >
                   {/* QR Code */}
-                  <div className="bg-white p-2 rounded-lg shrink-0">
+                  <div className="bg-[#0A0A0A] p-2 rounded-lg shrink-0">
                     <img
-                      src={ticket.qrCode}
+                      src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/orders/${ticket.orderId}/qr-image`}
                       alt="QR Code"
-                      className="w-20 h-20"
+                      className="w-20 h-20 rounded"
                     />
                   </div>
 
@@ -372,7 +372,7 @@ export default function GenerateTicketsPage() {
 
                   {/* Download */}
                   <a
-                    href={ticket.qrCode}
+                    href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/orders/${ticket.orderId}/qr-image`}
                     download={`ticket-${ticket.orderId}.png`}
                     className="shrink-0 px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center gap-1.5"
                   >
