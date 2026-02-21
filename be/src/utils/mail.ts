@@ -12,24 +12,23 @@ const __dirname = path.dirname(__filename);
 let _resend: Resend | null = null;
 
 export function getResend(): Resend {
-    if (!_resend) {
-        _resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
-    }
-    return _resend;
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+  }
+  return _resend;
 }
 
 const FROM_EMAIL = process.env.MAIL_FROM || "VITopia '26 <tickets@vitap.ac.in>";
 
 export interface TicketEmailData {
-    name: string;
-    orderId: string;
-    eventName: string;
-    quantity: number;
-    qrBase64: string;
+  name: string;
+  orderId: string;
+  eventName: string;
+  quantity: number;
 }
 
 export function buildEmailHtml(data: TicketEmailData): string {
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -49,10 +48,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
           <!-- Header Area -->
           <tr>
             <td style="padding:48px 40px;text-align:center;border-bottom:1px solid #2a2a2a;background:linear-gradient(180deg, #1f1f1f 0%, #141414 100%);">
-              <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#9AE600;margin-bottom:16px;">VIT-AP University Presents</div>
-              <h1 style="margin:0;font-size:42px;font-weight:800;letter-spacing:-1.5px;color:#ffffff;">
-                VITopia <span style="color:#9AE600;">'26</span>
-              </h1>
+              <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#9AE600;margin-bottom:24px;">VIT-AP University Presents</div>
+              <img src="cid:logo" alt="VITopia '26" style="width:240px;height:auto;display:block;margin:0 auto;" />
             </td>
           </tr>
 
@@ -86,8 +83,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
                 </tr>
                 <tr>
                   <td style="padding:24px;text-align:center;background-color:#ffffff;border-bottom-left-radius:16px;border-bottom-right-radius:16px;">
-                    <!-- Base64 inline image -->
-                    <img src="data:image/png;base64,${data.qrBase64}" alt="Your Ticket QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
+                    <!-- CID inline image -->
+                    <img src="cid:qrcode" alt="Your Ticket QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
                     <p style="margin:16px 0 0;font-size:13px;font-weight:500;color:#666666;">Scan at the entry gate</p>
                   </td>
                 </tr>
@@ -134,68 +131,69 @@ export function buildEmailHtml(data: TicketEmailData): string {
  * @param emailOverride Optional email to send the ticket to (instead of the user's email)
  */
 export async function sendTicketEmail(orderId: string, emailOverride?: string) {
-    if (!process.env.RESEND_API_KEY) {
-        throw new Error("RESEND_API_KEY is not configured");
-    }
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
 
-    const order = await ordersRepo.getByOrderId(orderId);
-    if (!order) {
-        throw new Error(`Order not found: ${orderId}`);
-    }
+  const order = await ordersRepo.getByOrderId(orderId);
+  if (!order) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
 
-    const recipientEmail = emailOverride || order.user?.email;
-    if (!recipientEmail) {
-        throw new Error(`No recipient email for order: ${orderId}`);
-    }
+  const recipientEmail = emailOverride || order.user?.email;
+  if (!recipientEmail) {
+    throw new Error(`No recipient email for order: ${orderId}`);
+  }
 
-    const qrToken = generateQRCode({ orderId: order.orderId });
-    const qrBuffer = await generateStyledQRImage(qrToken);
-    const qrBase64 = qrBuffer.toString("base64");
+  const qrToken = generateQRCode({ orderId: order.orderId });
+  const qrBuffer = await generateStyledQRImage(qrToken);
 
-    const logoPath = path.join(__dirname, "../assets/vitopia.png");
-    let logoBase64 = "";
-    try {
-        logoBase64 = fs.readFileSync(logoPath).toString("base64");
-    } catch (e) {
-        console.warn("Could not read vitopia.png logo for email", e);
-    }
+  // Load logo
+  const logoPath = path.join(__dirname, "../assets/vitopia.png");
+  let logoBuffer: Buffer | null = null;
+  try {
+    logoBuffer = fs.readFileSync(logoPath);
+  } catch (e) {
+    console.warn("Could not read vitopia.png logo for email", e);
+  }
 
-    const attachments: any[] = [
-        {
-            filename: `ticket-${order.orderId}.png`,
-            content: qrBase64,
-            contentType: "image/png",
-        },
-    ];
+  const attachments: any[] = [
+    {
+      filename: `ticket-${order.orderId}.png`,
+      content: qrBuffer,
+      contentType: "image/png",
+      contentId: "qrcode",
+    },
+  ];
 
-    if (logoBase64) {
-        attachments.push({
-            filename: "vitopia.png",
-            content: logoBase64,
-            contentType: "image/png",
-        });
-    }
-
-    const { data, error } = await getResend().emails.send({
-        from: FROM_EMAIL,
-        to: [recipientEmail],
-        subject: `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
-        html: buildEmailHtml({
-            name: order.user?.name || "Attendee",
-            orderId: order.orderId,
-            eventName: order.event?.name || "Event",
-            quantity: order.quantity,
-            qrBase64: qrBase64,
-        }),
-        attachments,
+  if (logoBuffer) {
+    attachments.push({
+      filename: "vitopia.png",
+      content: logoBuffer,
+      contentType: "image/png",
+      contentId: "logo",
     });
+  }
 
-    if (error) {
-        throw new Error(`Resend error: ${error.message}`);
-    }
+  const { data, error } = await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: [recipientEmail],
+    subject: `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
+    html: buildEmailHtml({
+      name: order.user?.name || "Attendee",
+      orderId: order.orderId,
+      eventName: order.event?.name || "Event",
+      quantity: order.quantity,
+    }),
+    attachments,
+  });
 
-    // Update order as mailed
-    await ordersRepo.updateOrder(orderId, { mailed: true });
+  if (error) {
+    throw new Error(`Resend error: ${error.message}`);
+  }
 
-    return { success: true, data };
+  // Update order as mailed
+  await ordersRepo.updateOrder(orderId, { mailed: true });
+
+  return { success: true, data };
 }

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import QRCode from "qrcode";
 import { fileURLToPath } from "url";
 import { prisma } from "../src/db/prisma.ts";
@@ -434,7 +435,7 @@ async function main() {
       update: orderPayload,
       create: {
         orderId: row.order_id.trim(),
-        qrToken: require("crypto").createHmac("sha256", process.env.JWT_SECRET || "Salt123").update(row.order_id.trim()).digest("hex").toUpperCase().substring(0, 16),
+        qrToken: crypto.createHmac("sha256", process.env.JWT_SECRET || "Salt123").update(row.order_id.trim()).digest("hex").toUpperCase().substring(0, 16),
         createdAt: now,
         ...orderPayload,
       },
