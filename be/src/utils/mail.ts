@@ -202,10 +202,7 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
+    day: 'numeric'
   });
 
   const qrToken = generateQRCode({ orderId: order.orderId });
