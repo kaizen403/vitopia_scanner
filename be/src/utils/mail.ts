@@ -28,56 +28,95 @@ export function buildEmailHtml(data: TicketEmailData): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;background:#000;font-family:'Helvetica Neue',Arial,sans-serif;color:#fff;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000;padding:40px 20px;">
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Inter',sans-serif;color:#ffffff;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #222;border-radius:16px;overflow:hidden;">
+        <!-- Main Card -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#141414;border:1px solid #2a2a2a;border-radius:24px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.5);">
+          
+          <!-- Header Area -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:40px 32px;border-bottom:1px solid #222;">
-              <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">
+            <td style="padding:48px 40px;text-align:center;border-bottom:1px solid #2a2a2a;background:linear-gradient(180deg, #1f1f1f 0%, #141414 100%);">
+              <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#9AE600;margin-bottom:16px;">VIT-AP University Presents</div>
+              <h1 style="margin:0;font-size:42px;font-weight:800;letter-spacing:-1.5px;color:#ffffff;">
                 VITopia <span style="color:#9AE600;">'26</span>
               </h1>
-              <p style="margin:8px 0 0;color:#666;font-size:14px;">Your ticket is ready</p>
+              <div style="margin-top:16px;display:inline-block;padding:8px 16px;background-color:rgba(154, 230, 0, 0.1);border-radius:100px;border:1px solid rgba(154, 230, 0, 0.2);">
+                <span style="font-size:14px;font-weight:600;color:#9AE600;">Official Ticket</span>
+              </div>
             </td>
           </tr>
+
+          <!-- Content Area -->
           <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 24px;font-size:16px;line-height:1.6;">
-                Hey <strong>${data.name}</strong>,
+            <td style="padding:40px;">
+              <p style="margin:0 0 8px;font-size:20px;font-weight:600;color:#ffffff;">
+                Hi ${data.name},
               </p>
-              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#999;">
-                Your registration for <strong style="color:#fff;">${data.eventName}</strong> is confirmed.
-                Show the attached QR code at the gate for entry.
+              <p style="margin:0 0 32px;font-size:16px;line-height:1.6;color:#a0a0a0;">
+                You're officially on the list. We've attached your QR code below—this is your exclusive pass to the event. Keep it safe and have it ready at the gate.
               </p>
-              <table cellpadding="0" cellspacing="0" style="background:#0a0a0a;border:1px solid #222;border-radius:12px;width:100%;margin-bottom:24px;">
+              
+              <!-- Details Box -->
+              <table cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;border:1px solid #2a2a2a;border-radius:16px;width:100%;margin-bottom:32px;">
                 <tr>
-                  <td style="padding:16px 20px;border-bottom:1px solid #1a1a1a;">
-                    <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Order ID</span>
-                    <div style="color:#9AE600;font-family:monospace;font-size:14px;margin-top:4px;">${data.orderId}</div>
+                  <td style="padding:24px;border-bottom:1px solid #1f1f1f;">
+                    <div style="margin-bottom:20px;">
+                      <span style="display:block;color:#666666;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Event Access</span>
+                      <span style="display:block;color:#ffffff;font-size:18px;font-weight:600;">${data.eventName}</span>
+                    </div>
+                    <div style="display:inline-block;margin-right:48px;">
+                      <span style="display:block;color:#666666;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Quantity</span>
+                      <span style="display:block;color:#ffffff;font-size:16px;font-weight:500;">${data.quantity} Pass${data.quantity > 1 ? 'es' : ''}</span>
+                    </div>
+                    <div style="display:inline-block;">
+                      <span style="display:block;color:#666666;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Order Ref</span>
+                      <span style="display:block;color:#9AE600;font-family:'Courier New',monospace;font-size:14px;font-weight:600;">${data.orderId}</span>
+                    </div>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:16px 20px;">
-                    <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Tickets</span>
-                    <div style="color:#fff;font-size:14px;margin-top:4px;">${data.quantity} × ${data.eventName}</div>
+                  <td style="padding:24px;text-align:center;background-color:#ffffff;border-bottom-left-radius:16px;border-bottom-right-radius:16px;">
+                    <!-- The image CID references the attachment -->
+                    <img src="cid:qrcode" alt="Your Ticket QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
+                    <p style="margin:16px 0 0;font-size:13px;font-weight:500;color:#666666;">Scan at the entry gate</p>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0;font-size:13px;color:#555;line-height:1.5;">
-                QR code is attached as an image. Keep it handy on your phone for quick entry.
-              </p>
+
+              <div style="background-color:rgba(255,255,255,0.03);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#ffffff;">Need to know</h3>
+                <ul style="margin:0;padding-left:20px;color:#a0a0a0;font-size:14px;line-height:1.6;">
+                  <li style="margin-bottom:8px;">Have your brightness up when scanning.</li>
+                  <li style="margin-bottom:8px;">Valid ID required at entry.</li>
+                  <li>Please arrive early to avoid the rush.</li>
+                </ul>
+              </div>
             </td>
           </tr>
+          
+          <!-- Footer -->
           <tr>
-            <td style="padding:20px 32px;background:#0a0a0a;border-top:1px solid #1a1a1a;">
-              <p style="margin:0;font-size:12px;color:#444;text-align:center;">
-                VIT-AP University · Amaravati, AP · vitopia.vitap.ac.in
+            <td style="padding:32px 40px;text-align:center;border-top:1px solid #2a2a2a;background-color:#0a0a0a;">
+              <p style="margin:0;font-size:14px;font-weight:500;color:#666666;">
+                VIT-AP University Campus<br />
+                <span style="color:#444444;">Amaravati, Andhra Pradesh</span>
               </p>
+              <div style="margin-top:24px;padding-top:24px;border-top:1px solid #1f1f1f;">
+                <a href="https://vitopia.vitap.ac.in" style="color:#9AE600;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:0.5px;">vitopia.vitap.ac.in</a>
+              </div>
             </td>
           </tr>
         </table>
+        
+        <p style="margin:32px 0 0;font-size:12px;color:#444444;text-align:center;">
+          This is an automated message. Please do not reply.
+        </p>
       </td>
     </tr>
   </table>

@@ -49,19 +49,19 @@ model User {
 }
 
 model Event {
-  id          String  @id @default(uuid()) @db.Uuid
-  name        String
-  description String
-  date        BigInt
-  venue       String
-  capacity    Int
-  price       Int
-  isActive    Boolean @map("is_active")
-  accessToken String? @unique @map("access_token")
-  category    EventCategory @default(day)
-  sourceEventCode Int? @unique @map("source_event_code")
-  scanOrder   Int @default(0) @map("scan_order")
-  createdAt   BigInt  @map("created_at")
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String
+  description     String
+  date            BigInt
+  venue           String
+  capacity        Int
+  price           Int
+  isActive        Boolean       @map("is_active")
+  accessToken     String?       @unique @map("access_token")
+  category        EventCategory @default(day)
+  sourceEventCode Int?          @unique @map("source_event_code")
+  scanOrder       Int           @default(0) @map("scan_order")
+  createdAt       BigInt        @map("created_at")
 
   orders   Order[]
   scanLogs ScanLog[]
@@ -74,31 +74,31 @@ model Event {
 }
 
 model Order {
-  id            String        @id @default(uuid()) @db.Uuid
-  orderId       String        @unique @map("order_id")
-  qrToken       String?       @unique @map("qr_token")
-  receiptId     String?       @map("receipt_id")
-  productMeta   String?       @map("product_meta")
-  invoiceNumber String?       @map("invoice_number")
-  sourceEventCode Int?        @map("source_event_code")
-  registrationId Int?          @map("registration_id")
-  fieldValues   Json?         @map("field_values")
-  accessTokens  String[]      @default([]) @map("access_tokens")
-  tshirtEligible Boolean      @default(false) @map("tshirt_eligible")
-  tshirtSize    String?       @map("tshirt_size")
-  tshirtColor   String?       @map("tshirt_color")
-  userId        String        @map("user_id") @db.Uuid
-  eventId       String        @map("event_id") @db.Uuid
-  quantity      Int
-  totalAmount   Int           @map("total_amount")
-  paymentStatus PaymentStatus @map("payment_status")
-  checkedIn     Boolean       @map("checked_in")
-  checkedInAt   BigInt?       @map("checked_in_at")
-  checkedInBy   String?       @map("checked_in_by")
-  checkedInGate String?       @map("checked_in_gate")
-  mailed        Boolean       @default(false)
-  createdAt     BigInt        @map("created_at")
-  updatedAt     BigInt        @map("updated_at")
+  id              String        @id @default(uuid()) @db.Uuid
+  orderId         String        @unique @map("order_id")
+  qrToken         String?       @unique @map("qr_token")
+  receiptId       String?       @map("receipt_id")
+  productMeta     String?       @map("product_meta")
+  invoiceNumber   String?       @map("invoice_number")
+  sourceEventCode Int?          @map("source_event_code")
+  registrationId  String?       @map("registration_id")
+  fieldValues     Json?         @map("field_values")
+  accessTokens    String[]      @default([]) @map("access_tokens")
+  tshirtEligible  Boolean       @default(false) @map("tshirt_eligible")
+  tshirtSize      String?       @map("tshirt_size")
+  tshirtColor     String?       @map("tshirt_color")
+  userId          String        @map("user_id") @db.Uuid
+  eventId         String        @map("event_id") @db.Uuid
+  quantity        Int
+  totalAmount     Int           @map("total_amount")
+  paymentStatus   PaymentStatus @map("payment_status")
+  checkedIn       Boolean       @map("checked_in")
+  checkedInAt     BigInt?       @map("checked_in_at")
+  checkedInBy     String?       @map("checked_in_by")
+  checkedInGate   String?       @map("checked_in_gate")
+  mailed          Boolean       @default(false)
+  createdAt       BigInt        @map("created_at")
+  updatedAt       BigInt        @map("updated_at")
 
   user     User      @relation(fields: [userId], references: [id])
   event    Event     @relation(fields: [eventId], references: [id])

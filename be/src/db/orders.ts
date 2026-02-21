@@ -44,7 +44,7 @@ export interface MappedOrder {
   productMeta: string | null;
   invoiceNumber: string | null;
   sourceEventCode: number | null;
-  registrationId: number | null;
+  registrationId: string | null;
   fieldValues: unknown;
   accessTokens: string[];
   tshirtEligible: boolean;
@@ -151,7 +151,7 @@ export async function create(data: {
   productMeta?: string;
   invoiceNumber?: string;
   sourceEventCode?: number;
-  registrationId?: number;
+  registrationId?: string;
   fieldValues?: unknown;
   accessTokens?: string[];
   tshirtEligible?: boolean;

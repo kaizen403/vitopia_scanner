@@ -6,6 +6,7 @@ import {
   createOrder,
   payOrder,
   getEvents,
+  sendMails,
   Event,
 } from "@/lib/api";
 import {
@@ -18,6 +19,8 @@ import {
   QrCode,
   Copy,
   Check,
+  Mail,
+  MailCheck,
 } from "lucide-react";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
@@ -166,6 +169,22 @@ export default function GenerateTicketsPage() {
     navigator.clipboard.writeText(orderId);
     setCopiedId(orderId);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const [sendingMailFor, setSendingMailFor] = useState<string | null>(null);
+  const [mailedTickets, setMailedTickets] = useState<Set<string>>(new Set());
+
+  const handleSendMail = async (orderId: string) => {
+    if (sendingMailFor || mailedTickets.has(orderId)) return;
+    setSendingMailFor(orderId);
+    try {
+      await sendMails([orderId]);
+      setMailedTickets(new Set(mailedTickets).add(orderId));
+    } catch (err) {
+      alert("Failed to send email. You can try again from the Send Mails page.");
+    } finally {
+      setSendingMailFor(null);
+    }
   };
 
   const stepLabels: Record<string, string> = {
@@ -355,14 +374,31 @@ export default function GenerateTicketsPage() {
                     </div>
                   </div>
 
-                  {/* Download */}
-                  <a
-                    href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/orders/${ticket.orderId}/qr-image`}
-                    download={`ticket-${ticket.orderId}.png`}
-                    className="shrink-0 px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center gap-1.5"
-                  >
-                    <QrCode className="w-3.5 h-3.5" /> Download
-                  </a>
+                  {/* Actions */}
+                  <div className="flex flex-row sm:flex-col gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleSendMail(ticket.orderId)}
+                      disabled={sendingMailFor === ticket.orderId || mailedTickets.has(ticket.orderId)}
+                      className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sendingMailFor === ticket.orderId ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : mailedTickets.has(ticket.orderId) ? (
+                        <MailCheck className="w-3.5 h-3.5 text-[#9AE600]" />
+                      ) : (
+                        <Mail className="w-3.5 h-3.5" />
+                      )}
+                      {mailedTickets.has(ticket.orderId) ? "Sent" : "Send Mail"}
+                    </button>
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/orders/${ticket.orderId}/qr-image`}
+                      download={`ticket-${ticket.orderId}.png`}
+                      className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <QrCode className="w-3.5 h-3.5" /> Download
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>

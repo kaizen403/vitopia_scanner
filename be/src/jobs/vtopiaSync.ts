@@ -109,7 +109,7 @@ export async function syncRegistrations() {
     const validRegistrations = allRegistrations.filter(
       (reg: any) => !!reg.registration_id
     );
-    const newCount = validRegistrations.filter((reg: any) => !existingIds.has(Number(reg.registration_id))).length;
+    const newCount = validRegistrations.filter((reg: any) => !existingIds.has(String(reg.registration_id))).length;
 
     console.log(`[VTOPIA Sync] Fetched ${allRegistrations.length} total. ${validRegistrations.length} valid, ${newCount} new, ${validRegistrations.length - newCount} to re-sync.`);
 
@@ -187,7 +187,7 @@ export async function syncRegistrations() {
               accessTokens: parsedMeta.tokens
             },
             create: {
-              registrationId: Number(reg.registration_id),
+              registrationId: String(reg.registration_id),
               orderId: reg.order_id || `VTOPIA-${reg.registration_id}`,
               receiptId: reg.receipt_id,
               invoiceNumber: reg.invoice_number,

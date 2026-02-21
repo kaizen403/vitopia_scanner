@@ -34,7 +34,7 @@ export interface ScanOrderContext {
   quantity: number;
   receiptId: string | null;
   invoiceNumber: string | null;
-  registrationId: number | null;
+  registrationId: string | null;
   productMeta: string | null;
   accessTokens: string[];
   tshirt: ScanTshirtContext;
