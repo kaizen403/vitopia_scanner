@@ -244,7 +244,7 @@ export default function SendMailsPage() {
         </div>
 
         {filtersOpen && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 mt-1">
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
                 <Mail className="w-3 h-3" /> Mail Status
@@ -257,23 +257,6 @@ export default function SendMailsPage() {
                 <option value="">All</option>
                 <option value="false">Not Mailed</option>
                 <option value="true">Already Mailed</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-                <CreditCard className="w-3 h-3" /> Payment Status
-              </label>
-              <select
-                value={filter.paymentStatus || ""}
-                onChange={(e) => updateFilter("paymentStatus", e.target.value || undefined)}
-                className="w-full h-9 bg-[#111] border border-[#333] rounded-lg px-3 text-sm text-white focus:border-[#9AE600] focus:outline-none cursor-pointer"
-              >
-                <option value="">All</option>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-                <option value="refunded">Refunded</option>
               </select>
             </div>
 
@@ -308,7 +291,7 @@ export default function SendMailsPage() {
               </select>
             </div>
 
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-1.5 ">
               <label className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
                 <Calendar className="w-3 h-3" /> Date Range
               </label>
@@ -486,7 +469,6 @@ export default function SendMailsPage() {
                   <th className="px-6 py-4">Order ID / Date</th>
                   <th className="px-6 py-4">User Details</th>
                   <th className="px-6 py-4">Event</th>
-                  <th className="px-6 py-4">Payment</th>
                   <th className="px-6 py-4">Status</th>
                 </tr>
               </thead>
@@ -518,16 +500,6 @@ export default function SendMailsPage() {
                     <td className="px-6 py-4">
                       <div className="text-white max-w-[200px] truncate" title={order.event?.name}>{order.event?.name}</div>
                       <div className="text-xs text-zinc-500">{order.quantity} Ticket(s)</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        order.paymentStatus === "paid" ? "bg-primary/10 text-primary border-primary/20" :
-                        order.paymentStatus === "pending" ? "bg-yellow-900/20 text-yellow-500 border-yellow-900/50" :
-                        order.paymentStatus === "refunded" ? "bg-blue-900/20 text-blue-400 border-blue-900/50" :
-                        "bg-red-900/20 text-red-400 border-red-900/50"
-                      }`}>
-                        {order.paymentStatus}
-                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1.5 items-start">

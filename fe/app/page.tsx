@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Camera,
@@ -135,6 +136,8 @@ declare global {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -184,8 +187,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    void loadEvents();
-  }, [loadEvents]);
+    const token = localStorage.getItem("gateId");
+    if (!token) {
+      router.push("/login");
+    } else {
+      setHasAccess(true);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (hasAccess) {
+      void loadEvents();
+    }
+  }, [loadEvents, hasAccess]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -616,6 +630,8 @@ export default function Home() {
   };
 
   // ============ EVENT SELECTION SCREEN ============
+  if (!hasAccess) return null;
+
   if (!selectedEvent) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
@@ -972,18 +988,28 @@ export default function Home() {
                 {/* Previously scanned warning */}
                 {status === "already_used" && (
                   <div className="px-4 py-3 bg-yellow-500/5">
-                    <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider">Previously Scanned</p>
-                    <p className="text-sm text-yellow-400 font-medium mt-0.5">
-                      {formatTime(
-                        lastResult?.checkedInAt ??
-                          scanHistory.find(
-                            (entry) =>
-                              entry.orderId === (lastResult?.data?.orderId ?? "") &&
-                              entry.status === "success"
-                          )?.timestamp ??
-                          Date.now()
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider">Previously Scanned</p>
+                        <p className="text-sm text-yellow-400 font-medium mt-0.5">
+                          {formatTime(
+                            lastResult?.checkedInAt ??
+                              scanHistory.find(
+                                (entry) =>
+                                  entry.orderId === (lastResult?.data?.orderId ?? "") &&
+                                  entry.status === "success"
+                              )?.timestamp ??
+                              Date.now()
+                          )}
+                        </p>
+                      </div>
+                      {lastResult?.checkedInByName && (
+                        <div className="text-right">
+                          <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider">Gate</p>
+                          <p className="text-sm text-yellow-400 font-medium mt-0.5">{lastResult.checkedInByName}</p>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
                 )}
 
