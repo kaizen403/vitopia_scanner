@@ -169,6 +169,7 @@ export interface ScanResult {
   };
   checkedInAt?: number;
   checkedInBy?: string;
+  checkedInByName?: string;
   responseTime?: number;
 }
 
