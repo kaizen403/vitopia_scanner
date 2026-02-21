@@ -17,6 +17,8 @@ import {
   ChevronUp,
   LayoutDashboard,
   X,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 import {
   verifyTicket,
@@ -197,6 +199,9 @@ export default function Home() {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (carnivalDropdownRef.current && !carnivalDropdownRef.current.contains(e.target as Node)) {
+        setCarnivalDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -644,7 +649,10 @@ export default function Home() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  onClick={() => setDropdownOpen((o) => !o)}
+                  onClick={() => {
+                    setDropdownOpen((o) => !o);
+                    setCarnivalDropdownOpen(false);
+                  }}
                   className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-4 text-left flex items-center justify-between focus:outline-none focus:border-[#9AE600]/50 focus:ring-1 focus:ring-[#9AE600]/30 transition-all"
                 >
                   <span className="text-base text-[#99A1AF]">Choose an event...</span>
@@ -676,6 +684,54 @@ export default function Home() {
               {orderedEvents.filter((ev) => ev.accessToken).length === 0 && (
                 <div className="text-center py-10 text-[#99A1AF]">
                   <p>No events available</p>
+                </div>
+              )}
+
+              {orderedEvents.filter((ev) => !ev.accessToken && ev.isActive).length > 0 && (
+                <div className="relative" ref={carnivalDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCarnivalDropdownOpen((o) => !o);
+                      setDropdownOpen(false);
+                    }}
+                    className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-4 text-left flex items-center justify-between focus:outline-none focus:border-[#9AE600]/50 focus:ring-1 focus:ring-[#9AE600]/30 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#9AE600]" />
+                      <span className="text-base text-[#99A1AF]">Carnival Activities</span>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 text-[#9AE600] transition-transform ${carnivalDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {carnivalDropdownOpen && (
+                    <div className="absolute z-50 mt-2 w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden shadow-2xl shadow-black/60 max-h-72 overflow-y-auto">
+                      {orderedEvents
+                        .filter((ev) => !ev.accessToken && ev.isActive)
+                        .map((event) => (
+                          <button
+                            type="button"
+                            key={event.id}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setCarnivalDropdownOpen(false);
+                            }}
+                            className="w-full px-4 py-3.5 text-left text-sm text-white hover:bg-[#9AE600]/10 transition-colors flex items-center gap-3 border-b border-[#1a1a1a] last:border-b-0"
+                          >
+                            <Sparkles className="w-4 h-4 text-[#9AE600] shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate">{event.name}</span>
+                              {event.venue && (
+                                <span className="flex items-center gap-1 text-xs text-[#99A1AF] mt-0.5">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  {event.venue}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 

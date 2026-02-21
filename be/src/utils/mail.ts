@@ -19,6 +19,7 @@ export interface TicketEmailData {
     orderId: string;
     eventName: string;
     quantity: number;
+    qrBase64: string;
 }
 
 export function buildEmailHtml(data: TicketEmailData): string {
@@ -82,8 +83,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
                 </tr>
                 <tr>
                   <td style="padding:24px;text-align:center;background-color:#ffffff;border-bottom-left-radius:16px;border-bottom-right-radius:16px;">
-                    <!-- The image CID references the attachment -->
-                    <img src="cid:qrcode" alt="Your Ticket QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
+                    <!-- Base64 inline image -->
+                    <img src="data:image/png;base64,${data.qrBase64}" alt="Your Ticket QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
                     <p style="margin:16px 0 0;font-size:13px;font-weight:500;color:#666666;">Scan at the entry gate</p>
                   </td>
                 </tr>
@@ -157,6 +158,7 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
             orderId: order.orderId,
             eventName: order.event?.name || "Event",
             quantity: order.quantity,
+            qrBase64: qrBase64,
         }),
         attachments: [
             {
