@@ -63,3 +63,4 @@ be/test-tickets.ts
 be/scripts/test-generation*.ts
 be/scripts/test-scan*.ts
 be/prisma/schema.prisma.patch
+*.base64.txt
