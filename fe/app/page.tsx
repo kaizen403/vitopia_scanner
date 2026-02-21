@@ -655,7 +655,7 @@ export default function Home() {
                   }}
                   className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-4 text-left flex items-center justify-between focus:outline-none focus:border-[#9AE600]/50 focus:ring-1 focus:ring-[#9AE600]/30 transition-all"
                 >
-                  <span className="text-base text-[#99A1AF]">Choose an event...</span>
+                  <span className="text-base text-[#99A1AF]">Prime events</span>
                   <ChevronDown className={`w-5 h-5 text-[#9AE600] transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
                 </button>
 
