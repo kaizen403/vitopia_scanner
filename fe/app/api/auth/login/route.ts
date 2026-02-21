@@ -1,33 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const body = await request.json();
 
-    if (username === "sibi" && password === "sibi") {
-      const token = await signToken({ role: "admin" });
+    const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-      const response = NextResponse.json({ success: true });
-      response.cookies.set(AUTH_COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60, // 7 days
-      });
+    const data = await backendRes.json();
+
+    if (data.success) {
+      const response = NextResponse.json(data);
+      
+      const setCookieHeader = backendRes.headers.get("set-cookie");
+      if (setCookieHeader) {
+        response.headers.set("set-cookie", setCookieHeader);
+      }
 
       return response;
     }
 
     return NextResponse.json(
-      { success: false, error: "Invalid credentials" },
-      { status: 401 }
+      { success: false, error: data.error || "Invalid credentials" },
+      { status: backendRes.status === 200 ? 401 : backendRes.status }
     );
-  } catch {
+  } catch (error) {
+    console.error("Login proxy error:", error);
     return NextResponse.json(
-      { success: false, error: "Invalid request" },
-      { status: 400 }
+      { success: false, error: "Internal server error" },
+      { status: 500 }
     );
   }
 }
