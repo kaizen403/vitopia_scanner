@@ -180,14 +180,12 @@ router.post(
           const errorMessages: Record<string, string> = {
             already_used: "Already scanned",
             not_found: "Not found",
-            not_paid: "Not paid",
             wrong_event: "Wrong event",
           };
 
           const statusCodes: Record<string, number> = {
             already_used: 409,
             not_found: 404,
-            not_paid: 402,
             wrong_event: 400,
           };
 
@@ -278,7 +276,6 @@ router.post(
         const statusCodes: Record<string, number> = {
           already_used: 409,
           not_found: 404,
-          not_paid: 402,
           wrong_event: 400,
         };
 

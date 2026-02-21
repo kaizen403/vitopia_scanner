@@ -3,7 +3,7 @@ import { prisma } from "../src/db/prisma.js";
 async function seed() {
     const eventId = "8e23810b-6e72-4b4c-99b7-549b7d9e6053";
     const now = BigInt(Date.now());
-    const commonSecret = "vitopia2026";
+    const commonSecret = "v2026";
 
     console.log("Seeding scanners...");
 

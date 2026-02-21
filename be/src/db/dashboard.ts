@@ -47,11 +47,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     events.map(async (event) => {
       const orderWhere = event.accessToken
         ? {
-            paymentStatus: "paid" as const,
             accessTokens: { has: event.accessToken },
           }
         : {
-            paymentStatus: "paid" as const,
             eventId: event.id,
           };
 

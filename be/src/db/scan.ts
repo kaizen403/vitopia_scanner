@@ -289,14 +289,6 @@ export async function checkIn(input: {
       };
     }
 
-    if (order.paymentStatus !== "paid") {
-      return {
-        success: false,
-        reason: "not_paid",
-        ...context,
-      };
-    }
-
     if (expectedEvent) {
       const existingSuccess = await tx.scanLog.findFirst({
         where: {
@@ -381,10 +373,6 @@ export async function validate(
 
   if (!order) {
     return { valid: false, reason: "not_found" };
-  }
-
-  if (order.paymentStatus !== "paid") {
-    return { valid: false, reason: "not_paid" };
   }
 
   const expectedEvent = expectedEventId
@@ -599,11 +587,9 @@ export async function getStats(eventId: string): Promise<ScanStats | null> {
 
   const orderWhere = event.accessToken
     ? {
-      paymentStatus: "paid" as const,
       accessTokens: { has: event.accessToken },
     }
     : {
-      paymentStatus: "paid" as const,
       eventId: event.id,
     };
 
