@@ -1,7 +1,13 @@
 import { Resend } from "resend";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import * as ordersRepo from "../db/orders.js";
 import { generateQRCode } from "./qr-code.js";
 import { generateStyledQRImage } from "./qr-image.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let _resend: Resend | null = null;
 
@@ -47,9 +53,6 @@ export function buildEmailHtml(data: TicketEmailData): string {
               <h1 style="margin:0;font-size:42px;font-weight:800;letter-spacing:-1.5px;color:#ffffff;">
                 VITopia <span style="color:#9AE600;">'26</span>
               </h1>
-              <div style="margin-top:16px;display:inline-block;padding:8px 16px;background-color:rgba(154, 230, 0, 0.1);border-radius:100px;border:1px solid rgba(154, 230, 0, 0.2);">
-                <span style="font-size:14px;font-weight:600;color:#9AE600;">Official Ticket</span>
-              </div>
             </td>
           </tr>
 
@@ -149,6 +152,30 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
     const qrBuffer = await generateStyledQRImage(qrToken);
     const qrBase64 = qrBuffer.toString("base64");
 
+    const logoPath = path.join(__dirname, "../assets/vitopia.png");
+    let logoBase64 = "";
+    try {
+        logoBase64 = fs.readFileSync(logoPath).toString("base64");
+    } catch (e) {
+        console.warn("Could not read vitopia.png logo for email", e);
+    }
+
+    const attachments: any[] = [
+        {
+            filename: `ticket-${order.orderId}.png`,
+            content: qrBase64,
+            contentType: "image/png",
+        },
+    ];
+
+    if (logoBase64) {
+        attachments.push({
+            filename: "vitopia.png",
+            content: logoBase64,
+            contentType: "image/png",
+        });
+    }
+
     const { data, error } = await getResend().emails.send({
         from: FROM_EMAIL,
         to: [recipientEmail],
@@ -160,13 +187,7 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
             quantity: order.quantity,
             qrBase64: qrBase64,
         }),
-        attachments: [
-            {
-                filename: `ticket-${order.orderId}.png`,
-                content: qrBase64,
-                contentType: "image/png",
-            },
-        ],
+        attachments,
     });
 
     if (error) {

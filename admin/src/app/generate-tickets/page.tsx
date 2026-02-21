@@ -21,6 +21,7 @@ import {
   Check,
   Mail,
   MailCheck,
+  X,
 } from "lucide-react";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
@@ -368,14 +369,18 @@ export default function GenerateTicketsPage() {
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#9AE600]/10 text-[#9AE600] border border-[#9AE600]/20">
                         {ticket.eventName}
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-900/20 text-green-400 border border-green-900/50">
-                        <CheckCircle2 className="w-3 h-3" /> Paid
-                      </span>
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex flex-row sm:flex-col gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedTickets((prev) => prev.filter((t) => t.orderId !== ticket.orderId))}
+                      className="px-2 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-500 hover:text-red-400 hover:border-red-900/40 transition-all flex items-center justify-center"
+                      title="Dismiss"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleSendMail(ticket.orderId)}
