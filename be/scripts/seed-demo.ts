@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 import { fileURLToPath } from "url";
 import { prisma } from "../src/db/prisma.ts";
 import type { PrismaClient } from "../generated/prisma/client.js";
-import { generateQRCode, verifyQRCode } from "../src/utils/qr-code.ts";
+import { generateQRCode } from "../src/utils/qr-code.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QR_DIR = path.resolve(__dirname, "../../QRs");
@@ -171,6 +171,49 @@ async function main() {
     console.log(`  Created event: ${def.name} (${def.token})`);
   }
 
+  console.log("=== Step 2b: Seeding 40 scanner accounts (20M/20F) ===");
+  const day1Event = eventByToken.get("DAY_1");
+  if (day1Event) {
+    // Seed Male Scanners
+    for (let i = 1; i <= 20; i++) {
+      const gateId = `SCAN-M-${i.toString().padStart(3, "0")}`;
+      const name = `Male Scanner ${i}`;
+      const secret = `vitopia-m-${i.toString().padStart(3, "0")}`;
+
+      await db.gate.create({
+        data: {
+          gateId,
+          name,
+          secret,
+          gender: "M",
+          eventId: day1Event.id,
+          isActive: true,
+          createdAt: now,
+        },
+      });
+    }
+
+    // Seed Female Scanners
+    for (let i = 1; i <= 20; i++) {
+      const gateId = `SCAN-F-${i.toString().padStart(3, "0")}`;
+      const name = `Female Scanner ${i}`;
+      const secret = `vitopia-f-${i.toString().padStart(3, "0")}`;
+
+      await db.gate.create({
+        data: {
+          gateId,
+          name,
+          secret,
+          gender: "F",
+          eventId: day1Event.id,
+          isActive: true,
+          createdAt: now,
+        },
+      });
+    }
+    console.log("  Created 40 scanner accounts.");
+  }
+
   console.log("=== Step 3: Creating orders (50 per event) ===");
   if (fs.existsSync(QR_DIR)) {
     fs.rmSync(QR_DIR, { recursive: true });
@@ -227,11 +270,6 @@ async function main() {
       });
 
       const qrToken = generateQRCode({ orderId });
-      const verified = verifyQRCode(qrToken);
-      if (!verified.valid) {
-        console.error(`  ❌ QR verification failed for ${orderId}`);
-        continue;
-      }
 
       const filePath = path.join(folderPath, `${orderId}.png`);
       await QRCode.toFile(filePath, qrToken, {

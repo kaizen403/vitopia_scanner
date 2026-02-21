@@ -330,6 +330,49 @@ async function main() {
     });
   }
 
+  console.log("=== Step 2b: Seeding 40 scanner accounts (20M/20F) ===");
+  const day1Event = eventByToken.get("DAY_1");
+  if (day1Event) {
+    // Seed Male Scanners
+    for (let i = 1; i <= 20; i++) {
+      const gateId = `SCAN-M-${i.toString().padStart(3, "0")}`;
+      const name = `Male Scanner ${i}`;
+      const secret = `vitopia-m-${i.toString().padStart(3, "0")}`;
+
+      await db.gate.create({
+        data: {
+          gateId,
+          name,
+          secret,
+          gender: "M",
+          eventId: day1Event.id,
+          isActive: true,
+          createdAt: now,
+        },
+      });
+    }
+
+    // Seed Female Scanners
+    for (let i = 1; i <= 20; i++) {
+      const gateId = `SCAN-F-${i.toString().padStart(3, "0")}`;
+      const name = `Female Scanner ${i}`;
+      const secret = `vitopia-f-${i.toString().padStart(3, "0")}`;
+
+      await db.gate.create({
+        data: {
+          gateId,
+          name,
+          secret,
+          gender: "F",
+          eventId: day1Event.id,
+          isActive: true,
+          createdAt: now,
+        },
+      });
+    }
+    console.log("Seeded 40 scanner accounts.");
+  }
+
   console.log("=== Step 3: Importing CSV registrations ===");
   const usersByEmail = new Map<string, { id: string }>();
   let imported = 0;
