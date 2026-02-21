@@ -180,15 +180,31 @@ export async function syncRegistrations() {
           
           const parsedMeta = parseProductMeta(reg.product_meta);
 
+          const targetRegistrationId = String(reg.registration_id);
+          const existingOrder = await prisma.order.findFirst({
+            where: { registrationId: targetRegistrationId }
+          });
+          
+          const targetOrderId = existingOrder?.orderId || reg.order_id || `VTOPIA-${reg.registration_id}`;
+
           await prisma.order.upsert({
-            where: { orderId: reg.order_id || `VTOPIA-${reg.registration_id}` },
+            where: { orderId: targetOrderId },
             update: {
+              receiptId: reg.receipt_id || null,
+              invoiceNumber: reg.invoice_number || null,
               productMeta: parsedMeta.cleanName,
-              accessTokens: parsedMeta.tokens
+              accessTokens: parsedMeta.tokens,
+              fieldValues: reg.field_values ? JSON.parse(JSON.stringify(reg.field_values)) : null,
+              totalAmount: totalAmount,
+              paymentStatus: 'paid' as any,
+              sourceEventCode: eventIdFromApi,
+              eventId: event.id,
+              userId: user.id,
+              updatedAt: BigInt(Date.now())
             },
             create: {
-              registrationId: String(reg.registration_id),
-              orderId: reg.order_id || `VTOPIA-${reg.registration_id}`,
+              registrationId: targetRegistrationId,
+              orderId: targetOrderId,
               receiptId: reg.receipt_id,
               invoiceNumber: reg.invoice_number,
               productMeta: parsedMeta.cleanName,

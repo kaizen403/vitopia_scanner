@@ -69,14 +69,14 @@ export default function LoginPage() {
               htmlFor="username"
               className="block text-xs text-[#99A1AF] uppercase tracking-wider mb-2"
             >
-              Username
+              Gate ID (e.g. M-01)
             </label>
             <input
               id="username"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              onChange={(e) => setUsername(e.target.value.toUpperCase())}
+              placeholder="M-01 or F-01"
               required
               disabled={loading}
               autoComplete="username"
