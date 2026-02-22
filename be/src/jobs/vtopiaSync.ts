@@ -1,9 +1,15 @@
 import cron from 'node-cron';
 import axios from 'axios';
+import crypto from 'crypto';
 import { prisma as basePrisma } from '../db/prisma.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 
 const prisma = basePrisma as unknown as PrismaClient;
+
+function generateQrToken(orderId: string): string {
+  const secret = process.env.JWT_SECRET || "Salt123";
+  return crypto.createHmac("sha256", secret).update(orderId).digest("hex").toUpperCase().substring(0, 16);
+}
 
 // A flag to prevent the cron job from overlapping with itself
 
@@ -196,6 +202,7 @@ export async function syncRegistrations() {
               sourceEventCode: eventIdFromApi,
               eventId: event.id,
               userId: user.id,
+              qrToken: generateQrToken(targetOrderId),
               updatedAt: BigInt(Date.now())
             },
             create: {
@@ -212,6 +219,7 @@ export async function syncRegistrations() {
               sourceEventCode: eventIdFromApi,
               userId: user.id,
               eventId: event.id,
+              qrToken: generateQrToken(targetOrderId),
               checkedIn: false,
               createdAt: paymentTimestamp,
               updatedAt: BigInt(Date.now())
