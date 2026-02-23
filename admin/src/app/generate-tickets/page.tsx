@@ -28,15 +28,14 @@ import {
 } from "lucide-react";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
-  "Vitopia2026-Day1": "Pro-Show Day-1",
-  "Vitopia2026-Day2": "Pro-Show Day-2",
-  "Vitopia2026-Day3": "Pro-Show Day-3",
+  "Vitopia2026-Day2": "Day-2 Pro show",
+  "Day-2 Pro show": "Day-2 Pro show",
 };
 
 function formatEventName(name: string): string {
   if (EVENT_DISPLAY_NAMES[name]) return EVENT_DISPLAY_NAMES[name];
-  const speakerMatch = name.match(/^(Mr\.\s+[\w\s]+?)\s+on\s+/i);
-  if (speakerMatch) return `${speakerMatch[1].trim()} Standup`;
+  if (name === "Vitopia2026-Day2") return "Day-2 Pro show";
+  if (name === "Day-2 Pro show") return "Day-2 Pro show";
   return name;
 }
 
@@ -353,7 +352,7 @@ export default function GenerateTicketsPage() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {events.filter(ev => ev.isActive && ev.name !== "IGNORE_ME_ARCHIVED" && ev.name !== "Event Registration").map((ev) => (
+                {events.filter(ev => ev.isActive && ev.accessToken === "DAY_2").map((ev) => (
                   <button
                     key={ev.id}
                     type="button"

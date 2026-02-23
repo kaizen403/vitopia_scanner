@@ -16,7 +16,8 @@ import {
 function formatEventName(name: string): string {
   if (!name) return "—";
   if (name === "Vitopia2026-Day1") return "Vitopia Day 1";
-  if (name === "Vitopia2026-Day2") return "Vitopia Day 2";
+  if (name === "Vitopia2026-Day2") return "Day-2 Pro show";
+  if (name === "Day-2 Pro show") return "Day-2 Pro show";
   if (name === "Vitopia2026-Day3") return "Vitopia Day 3";
   if (name.includes("Mr. Pranav Sharma")) return "Mr. Pranav Sharma";
   if (name.includes("Sarat Raja Uday Boddeda") || name.includes("Mr. Sarat Raja")) return "Mr. Sarat Raja Uday Boddeda";
@@ -129,6 +130,7 @@ function Dashboard() {
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-400 mb-4">{error}</p>
           <button
+            type="button"
             onClick={() => { setLoading(true); loadData(); }}
             className="px-6 py-2 bg-[#1a1a1a] border border-[#1a1a1a] text-white rounded-xl hover:border-[#333]"
           >
@@ -176,6 +178,7 @@ function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => { setLoading(true); loadData(); }}
               className="p-2.5 hover:bg-[#1a1a1a] rounded-xl transition-colors"
               title="Refresh"
@@ -183,6 +186,7 @@ function Dashboard() {
               <RefreshCw className={`w-5 h-5 text-[#99A1AF] ${loading ? "animate-spin" : ""}`} />
             </button>
             <button
+              type="button"
               onClick={handleLogout}
               className="p-2.5 hover:bg-[#1a1a1a] rounded-xl transition-colors"
               title="Logout"

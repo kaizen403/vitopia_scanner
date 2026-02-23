@@ -18,16 +18,14 @@ import {
 } from "@/lib/api";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
-  "Vitopia2026-Day1": "Pro-Show Day-1",
-  "Vitopia2026-Day2": "Pro-Show Day-2",
-  "Vitopia2026-Day3": "Pro-Show Day-3",
+  "Vitopia2026-Day2": "Day-2 Pro show",
+  "Day-2 Pro show": "Day-2 Pro show",
 };
 
 function formatEventName(name: string): string {
   if (EVENT_DISPLAY_NAMES[name]) return EVENT_DISPLAY_NAMES[name];
-  // "Mr. Pranav Sharma on 22 Feb 2026 from 2.30 PM to 3.30 PM" → "Mr. Pranav Sharma Standup"
-  const speakerMatch = name.match(/^(Mr\.\s+[\w\s]+?)\s+on\s+/i);
-  if (speakerMatch) return `${speakerMatch[1].trim()} Standup`;
+  if (name === "Vitopia2026-Day2") return "Day-2 Pro show";
+  if (name === "Day-2 Pro show") return "Day-2 Pro show";
   return name;
 }
 
@@ -160,9 +158,13 @@ export default function AdminDashboard() {
     analytics: { totalTicketsSold: 0, totalCheckedIn: 0, totalRemaining: 0, events: [] }
   };
 
+  const day2Events = analytics.events.filter(
+    (e) => e.eventName === "Vitopia2026-Day2" || e.eventName === "Day-2 Pro show" || e.eventName?.includes("Day-2")
+  );
+
   const filteredEvents = selectedEventId === "all"
-    ? analytics.events
-    : analytics.events.filter((e) => e.eventId === selectedEventId);
+    ? day2Events
+    : day2Events.filter((e) => e.eventId === selectedEventId);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-12">

@@ -21,7 +21,7 @@ type ScanStatus = "idle" | "scanning" | "success" | "error" | "already_used";
 
 const EVENT_NAME_BY_TOKEN: Record<string, string> = {
   DAY_1: "Day-1",
-  DAY_2: "Day-2",
+  DAY_2: "Day-2 Pro show",
   DAY_3: "Day-3",
   PRANAV: "Mr. Pranav Sharma",
   UDAYA: "Mr. Sarat Raja Uday Boddeda",
@@ -40,7 +40,8 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
 function getEventDisplayName(event: Event): string {
   const token = event.accessToken ?? "";
   if (event.name === "Vitopia2026-Day1") return "Vitopia Day 1";
-  if (event.name === "Vitopia2026-Day2") return "Vitopia Day 2";
+  if (event.name === "Vitopia2026-Day2") return "Day-2 Pro show";
+  if (event.name === "Day-2 Pro show") return "Day-2 Pro show";
   if (event.name === "Vitopia2026-Day3") return "Vitopia Day 3";
   if (event.name.includes("Mr. Pranav Sharma")) return "Mr. Pranav Sharma";
   if (event.name.includes("Sarat Raja Uday Boddeda")) return "Mr. Sarat Raja Uday Boddeda";
@@ -81,22 +82,30 @@ export default function ScannerPage() {
   const lastScannedRef = useRef<string>("");
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const orderedEvents = useMemo(() => sortEventsForScanner(events), [events]);
+  const day2Events = useMemo(
+    () => orderedEvents.filter((event) => event.accessToken === "DAY_2"),
+    [orderedEvents]
+  );
+
+  const loadEvents = useCallback(async () => {
+    const data = await getEvents();
+    setEvents(data);
+    const firstDay2Event = data.find((event) => event.accessToken === "DAY_2");
+    if (firstDay2Event) {
+      setSelectedEventId(firstDay2Event.id);
+    }
+  }, []);
 
   // Load events and credentials on mount
   useEffect(() => {
-    loadEvents();
+    void loadEvents();
 
     const storedGateId = localStorage.getItem("gateId");
     const storedGateSecret = localStorage.getItem("gateSecret");
 
     if (storedGateId) setGateId(storedGateId);
     if (storedGateSecret) setGateSecret(storedGateSecret);
-  }, []);
-
-  async function loadEvents() {
-    const data = await getEvents();
-    setEvents(data);
-  }
+  }, [loadEvents]);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -126,50 +135,49 @@ export default function ScannerPage() {
   // Stop camera
   const stopCamera = useCallback(() => {
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
       setStream(null);
     }
     setScanning(false);
     setStatus("idle");
   }, [stream]);
 
-  // Scan QR code from video frame
-  const scanFrame = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current || !scanning) return;
+  const playSound = useCallback((type: "success" | "error") => {
+    if (!soundEnabled) return;
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
-    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    if (!AudioContextCtor) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const audioContext = new AudioContextCtor();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
 
-    try {
-      if ("BarcodeDetector" in window) {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ["qr_code"],
-        });
-        const barcodes = await barcodeDetector.detect(canvas);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
 
-        if (barcodes.length > 0) {
-          const qrCode = barcodes[0].rawValue;
-
-          if (qrCode !== lastScannedRef.current) {
-            lastScannedRef.current = qrCode;
-            await handleQRCodeDetected(qrCode);
-          }
-        }
-      }
-    } catch {
-      // Silently fail - will retry on next frame
+    if (type === "success") {
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } else {
+      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
     }
-  }, [scanning, gateId, gateSecret, selectedEventId]);
+  }, [soundEnabled]);
 
-  // Handle detected QR code
-  const handleQRCodeDetected = async (qrCode: string) => {
+  const handleQRCodeDetected = useCallback(async (qrCode: string) => {
     setStatus("scanning");
 
     try {
@@ -207,35 +215,37 @@ export default function ScannerPage() {
       });
       playSound("error");
     }
-  };
+  }, [gateId, gateSecret, selectedEventId, playSound]);
 
-  // Play sound feedback
-  const playSound = (type: "success" | "error") => {
-    if (!soundEnabled) return;
+  const scanFrame = useCallback(async () => {
+    if (!videoRef.current || !canvasRef.current || !scanning) return;
 
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA || !window.BarcodeDetector) return;
 
-    if (type === "success") {
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    } else {
-      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.4);
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      const barcodes = await barcodeDetector.detect(canvas);
+
+      if (barcodes.length > 0) {
+        const qrCode = barcodes[0].rawValue;
+
+        if (qrCode && qrCode !== lastScannedRef.current) {
+          lastScannedRef.current = qrCode;
+          await handleQRCodeDetected(qrCode);
+        }
+      }
+    } catch {
+      return;
     }
-  };
+  }, [scanning, handleQRCodeDetected]);
 
   // Manual QR code input
   const [manualInput, setManualInput] = useState("");
@@ -272,7 +282,9 @@ export default function ScannerPage() {
   useEffect(() => {
     return () => {
       if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
       }
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
@@ -360,8 +372,7 @@ export default function ScannerPage() {
                   onChange={(e) => setSelectedEventId(e.target.value)}
                   className="w-full pl-4 pr-10 py-3 bg-black border border-[#1a1a1a] rounded-lg text-white appearance-none focus:border-[#9AE600] focus:outline-none transition-colors min-h-[44px] truncate"
                 >
-                  <option value="">All Events</option>
-                  {orderedEvents.map((event) => (
+                  {day2Events.map((event) => (
                     <option key={event.id} value={event.id}>
                       {getEventDisplayName(event)}
                     </option>

@@ -12,75 +12,42 @@ function generateQrToken(orderId: string): string {
 }
 
 // A flag to prevent the cron job from overlapping with itself
-
-
-function parseProductMeta(rawMeta: string | null) {
-  if (!rawMeta) return { cleanName: "Unknown", tokens: [] };
-  
-  const tokens: string[] = [];
-  const displayNames: string[] = [];
-  const metaLower = rawMeta.toLowerCase();
-
-  // Parsing Special Events
-  const isPranav = metaLower.includes('pranav');
-  const isUday = metaLower.includes('uday') || metaLower.includes('sarat');
-
-  if (isPranav) {
-    tokens.push('PRANAV');
-    displayNames.push('Pranav Sharma Show');
-  }
-  if (isUday) {
-    tokens.push('UDAY');
-    displayNames.push('Sarat Raja Uday Boddeda Show');
-  }
-
-  // Parsing Days
-  if (metaLower.includes('day-1') || metaLower.includes('day 1') || metaLower.includes('day1') || metaLower.includes('22nd feb event')) {
-    tokens.push('DAY_1');
-    displayNames.push('Day 1');
-  }
-  
-  if (metaLower.includes('day-2') || metaLower.includes('day 2') || metaLower.includes('day2') || metaLower.includes('23rd feb event')) {
-    tokens.push('DAY_2');
-    displayNames.push('Day 2');
-  }
-  
-  if (metaLower.includes('day-3') || metaLower.includes('day 3') || metaLower.includes('day3') || metaLower.includes('valedictory')) {
-    tokens.push('DAY_3');
-    displayNames.push('Day 3');
-  }
-
-  if (metaLower.includes('t-shirt') || metaLower.includes('tshirt')) {
-    tokens.push('TSHIRT');
-    displayNames.push('T-Shirt');
-  }
-
-  // All Prime events 
-  if (metaLower.includes('all prime events')) {
-    displayNames.push('All Prime Events');
-    if (!tokens.includes('PRANAV')) tokens.push('PRANAV');
-    if (!tokens.includes('UDAY')) tokens.push('UDAY');
-  }
-
-  // Create clean name
-  let cleanName = '';
-  if (displayNames.length > 0) {
-    cleanName = displayNames.join(' + ');
-  } else if (rawMeta.includes('Ticket:')) {
-    cleanName = rawMeta.split('Ticket:')[1].trim();
-  } else {
-    cleanName = rawMeta;
-  }
-
-  return { cleanName, tokens };
-}
-
 let isSyncRunning = false;
 
-export async function syncRegistrations() {
+type VtopiaRegistration = {
+  registration_id: string | number | null;
+  email?: string | null;
+  name?: string | null;
+  payment_date?: string | null;
+  total?: string | number | null;
+  order_id?: string | null;
+  receipt_id?: string | null;
+  invoice_number?: string | null;
+  product_meta?: string | null;
+  field_values?: unknown;
+  event_id?: string | number | null;
+};
+
+export type Day2SyncSummary = {
+  totalApiRecords: number;
+  totalDay2Records: number;
+  newDay2Records: number;
+  upserted: number;
+  errors: number;
+};
+
+export async function syncRegistrations(): Promise<Day2SyncSummary> {
+  const summary: Day2SyncSummary = {
+    totalApiRecords: 0,
+    totalDay2Records: 0,
+    newDay2Records: 0,
+    upserted: 0,
+    errors: 0,
+  };
+
   if (isSyncRunning) {
     console.log('[VTOPIA Sync] Previous sync is still running. Skipping this cycle.');
-    return;
+    return summary;
   }
 
   isSyncRunning = true;
@@ -113,18 +80,25 @@ export async function syncRegistrations() {
       timeout: 30000 
     });
 
-    const allRegistrations = response.data;
+    const allRegistrations = response.data as unknown;
     
     if (!Array.isArray(allRegistrations)) {
       throw new Error("API did not return an array. Check the response format or authentication.");
     }
+    summary.totalApiRecords = allRegistrations.length;
 
-    const validRegistrations = allRegistrations.filter(
-      (reg: any) => !!reg.registration_id
-    );
-    const newCount = validRegistrations.filter((reg: any) => !existingIds.has(String(reg.registration_id))).length;
+    const validRegistrations = (allRegistrations as VtopiaRegistration[]).filter((reg) => {
+      if (!reg.registration_id) return false;
+      const productMeta = typeof reg.product_meta === 'string' ? reg.product_meta : '';
+      return productMeta.includes('Day-2');
+    });
+    summary.totalDay2Records = validRegistrations.length;
 
-    console.log(`[VTOPIA Sync] Fetched ${allRegistrations.length} total. ${validRegistrations.length} valid, ${newCount} new, ${validRegistrations.length - newCount} to re-sync.`);
+    const newCount = validRegistrations.filter((reg) => !existingIds.has(String(reg.registration_id))).length;
+    summary.newDay2Records = newCount;
+
+    console.log(`[VTOPIA Sync] Fetched ${allRegistrations.length} total. ${validRegistrations.length} valid Day-2 entries, ${newCount} new, ${validRegistrations.length - newCount} to re-sync.`);
+    console.log(`[VTOPIA Sync] TOTAL DAY-2 ENTRIES IN API: ${validRegistrations.length}`);
 
     if (validRegistrations.length > 0) {
       console.log(`[VTOPIA Sync] Processing ${validRegistrations.length} registrations...`);
@@ -158,9 +132,7 @@ export async function syncRegistrations() {
 
           // Calculate dates and amounts
           const paymentTimestamp = reg.payment_date ? BigInt(new Date(reg.payment_date).getTime()) : BigInt(Date.now());
-          const totalAmount = reg.total ? Math.round(parseFloat(reg.total)) : 0; 
-          
-          const parsedMeta = parseProductMeta(reg.product_meta);
+          const totalAmount = reg.total ? Math.round(parseFloat(String(reg.total))) : 0;
 
           const targetRegistrationId = String(reg.registration_id);
           const existingOrder = await prisma.order.findFirst({
@@ -169,38 +141,26 @@ export async function syncRegistrations() {
           
           const targetOrderId = existingOrder?.orderId || reg.order_id || `VTOPIA-${reg.registration_id}`;
 
-          let primaryToken = 'DAY_1';
-          if (parsedMeta.tokens.includes('DAY_1')) primaryToken = 'DAY_1';
-          else if (parsedMeta.tokens.includes('DAY_2')) primaryToken = 'DAY_2';
-          else if (parsedMeta.tokens.includes('DAY_3')) primaryToken = 'DAY_3';
-          else if (parsedMeta.tokens.includes('PRANAV')) primaryToken = 'PRANAV';
-          else if (parsedMeta.tokens.includes('UDAY')) primaryToken = 'UDAY';
-          else if (parsedMeta.tokens.includes('TSHIRT')) primaryToken = 'TSHIRT';
-
           let event = await prisma.event.findFirst({
-            where: { accessToken: primaryToken }
+            where: { accessToken: "DAY_2" }
           });
 
           if (!event) {
-             event = await prisma.event.findFirst({ where: { accessToken: "DAY_1" }});
-             if (!event) throw new Error("DAY_1 event not found");
-             if (!parsedMeta.tokens.includes("DAY_1")) {
-               parsedMeta.tokens.push("DAY_1");
-             }
+             throw new Error("DAY_2 event not found");
           }
 
-          const eventIdFromApi = typeof reg.event_id === 'number' ? reg.event_id : parseInt(reg.event_id, 10);
+          const eventIdFromApi = typeof reg.event_id === 'number' ? reg.event_id : parseInt(String(reg.event_id ?? ''), 10);
 
           await prisma.order.upsert({
             where: { orderId: targetOrderId },
             update: {
               receiptId: reg.receipt_id || null,
               invoiceNumber: reg.invoice_number || null,
-              productMeta: parsedMeta.cleanName,
-              accessTokens: parsedMeta.tokens,
+              productMeta: reg.product_meta || "Day-2 Pro show",
+              accessTokens: ["DAY_2"],
               fieldValues: reg.field_values ? JSON.parse(JSON.stringify(reg.field_values)) : null,
               totalAmount: totalAmount,
-              paymentStatus: 'paid' as any,
+              paymentStatus: 'paid',
               sourceEventCode: eventIdFromApi,
               eventId: event.id,
               userId: user.id,
@@ -212,12 +172,12 @@ export async function syncRegistrations() {
               orderId: targetOrderId,
               receiptId: reg.receipt_id,
               invoiceNumber: reg.invoice_number,
-              productMeta: parsedMeta.cleanName,
-              accessTokens: parsedMeta.tokens,
+              productMeta: reg.product_meta || "Day-2 Pro show",
+              accessTokens: ["DAY_2"],
               fieldValues: reg.field_values ? JSON.parse(JSON.stringify(reg.field_values)) : null,
               totalAmount: totalAmount,
               quantity: 1,
-              paymentStatus: 'paid' as any,
+              paymentStatus: 'paid',
               sourceEventCode: eventIdFromApi,
               userId: user.id,
               eventId: event.id,
@@ -229,9 +189,11 @@ export async function syncRegistrations() {
           });
 
           successCount++;
+          summary.upserted = successCount;
         } catch (err: any) {
           console.error(`[VTOPIA Sync] Error inserting registration ${reg.registration_id}:`, err.message);
           errorCount++;
+          summary.errors = errorCount;
         }
       }
       
@@ -244,6 +206,8 @@ export async function syncRegistrations() {
     isSyncRunning = false;
     console.log(`[VTOPIA Sync] [${new Date().toISOString()}] Sync finished.`);
   }
+
+  return summary;
 }
 
 export function startVtopiaCronJob() {

@@ -134,7 +134,7 @@ model ScanLog {
 
 model Gate {
   id        String  @id @default(uuid()) @db.Uuid
-  convexId  String? @unique @map("convex_id")
+
   gateId    String  @unique @map("gate_id")
   name      String
   secret    String  @default("v2026")

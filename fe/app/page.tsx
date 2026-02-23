@@ -46,7 +46,7 @@ interface ScanRecord {
 
 const EVENT_NAME_BY_TOKEN: Record<string, string> = {
   DAY_1: "Pro Show Day 1",
-  DAY_2: "Pro Show Day 2",
+  DAY_2: "Day-2 Pro show",
   DAY_3: "Pro Show Day 3",
   PRANAV: "Pranav Sharma Stand Up",
   UDAYA: "Uday Boddeda Stand Up",
@@ -64,7 +64,8 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
 
 function formatEventName(name: string): string {
   if (name === "Vitopia2026-Day1") return "Pro Show Day 1";
-  if (name === "Vitopia2026-Day2") return "Pro Show Day 2";
+  if (name === "Vitopia2026-Day2") return "Day-2 Pro show";
+  if (name === "Day-2 Pro show") return "Day-2 Pro show";
   if (name === "Vitopia2026-Day3") return "Pro Show Day 3";
   if (name.includes("Pranav Sharma")) return "Pranav Sharma Stand Up";
   if (name.includes("Sarat Raja Uday Boddeda") || name.includes("Uday")) return "Uday Boddeda Stand Up";
@@ -686,7 +687,7 @@ export default function Home() {
                       {orderedEvents
                         .filter((ev) => ev.accessToken)
                         .sort((a, b) => {
-                          const enabled = ["DAY_1", "PRANAV"];
+                          const enabled = ["DAY_2"];
                           const aEnabled = enabled.includes(a.accessToken ?? "");
                           const bEnabled = enabled.includes(b.accessToken ?? "");
                           if (aEnabled && !bEnabled) return -1;
@@ -694,7 +695,7 @@ export default function Home() {
                           return 0;
                         })
                         .map((event) => {
-                          const enabled = ["DAY_1", "PRANAV"].includes(event.accessToken ?? "");
+                          const enabled = ["DAY_2"].includes(event.accessToken ?? "");
                           return (
                             <button
                               type="button"
