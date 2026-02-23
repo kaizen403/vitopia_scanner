@@ -20,7 +20,8 @@
     "redis:up": "docker compose up -d",
     "redis:down": "docker compose down",
     "redis:logs": "docker compose logs -f redis",
-    "start:all": "pnpm run redis:up && pnpm run dev"
+    "start:all": "pnpm run redis:up && pnpm run dev",
+    "backup": "node backup.js"
   },
   "packageManager": "pnpm@10.27.0",
   "pnpm": {

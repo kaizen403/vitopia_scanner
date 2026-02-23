@@ -344,7 +344,7 @@ export async function listOrders(filter: OrderFilter): Promise<ListOrdersRespons
   if (filter.dateTo) params.append("dateTo", filter.dateTo);
   if (filter.page) params.append("page", filter.page.toString());
   if (filter.limit) params.append("limit", filter.limit.toString());
-  
+
   const response = await fetchApi<ListOrdersResponse>(`/api/orders?${params.toString()}`);
   return response.data || null;
 }
@@ -395,6 +395,31 @@ export async function sendMails(orderIds: string[]): Promise<SendMailsResponse |
   const response = await fetchApi<SendMailsResponse>("/api/mail/send", {
     method: "POST",
     body: JSON.stringify({ orderIds }),
+  });
+  return response.data || null;
+}
+
+/**
+ * Send emails for all orders matching the given filter — filter is applied
+ * server-side, so no large ID arrays are sent over the wire.
+ */
+export async function sendMailsFiltered(
+  filter: Omit<OrderFilter, "page" | "limit">
+): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send-filtered", {
+    method: "POST",
+    body: JSON.stringify({ ...filter }),
+  });
+  return response.data || null;
+}
+
+export async function sendMailsByEmails(
+  emails: string[],
+  eventId: string
+): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send-by-emails", {
+    method: "POST",
+    body: JSON.stringify({ emails, eventId }),
   });
   return response.data || null;
 }

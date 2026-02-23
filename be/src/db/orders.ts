@@ -196,8 +196,8 @@ export async function create(data: {
       data.accessTokens && data.accessTokens.length > 0
         ? Array.from(new Set(data.accessTokens))
         : event.accessToken
-        ? [event.accessToken]
-        : [];
+          ? [event.accessToken]
+          : [];
 
     const newOrderId = data.orderId || generateOrderId();
     const order = await tx.order.create({
@@ -292,7 +292,7 @@ export const ORDER_PAYMENT_STATUSES: Readonly<OrderPaymentStatus[]> = [
 ] as const;
 
 
-function buildOrderWhereClause(filters: {
+async function buildOrderWhereClause(filters: {
   search?: string;
   paymentStatus?: string;
   eventId?: string;
@@ -300,7 +300,7 @@ function buildOrderWhereClause(filters: {
   checkedIn?: string;
   dateFrom?: string;
   dateTo?: string;
-}): any {
+}): Promise<any> {
   const where: any = {};
 
   if (filters.paymentStatus) {
@@ -308,7 +308,20 @@ function buildOrderWhereClause(filters: {
   }
 
   if (filters.eventId) {
-    where.eventId = filters.eventId;
+    const event = await prisma.event.findUnique({
+      where: { id: filters.eventId },
+      select: { accessToken: true },
+    });
+
+    if (event?.accessToken === "DAY_1") {
+      where.productMeta = { contains: "Day 1" };
+    } else if (event?.accessToken === "DAY_2") {
+      where.productMeta = { contains: "Day 2" };
+    } else if (event?.accessToken === "DAY_3") {
+      where.productMeta = { contains: "Day 3" };
+    } else {
+      where.eventId = filters.eventId;
+    }
   }
 
   if (filters.mailed === "true") {
@@ -363,7 +376,7 @@ export async function listOrders(filters: {
   const limit = filters.limit || 50;
   const skip = (page - 1) * limit;
 
-  const where = buildOrderWhereClause(filters);
+  const where = await buildOrderWhereClause(filters);
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
@@ -404,7 +417,7 @@ export async function listOrderIds(filters: {
   dateFrom?: string;
   dateTo?: string;
 }) {
-  const where = buildOrderWhereClause(filters);
+  const where = await buildOrderWhereClause(filters);
 
   const orders = await prisma.order.findMany({
     where,

@@ -5,6 +5,8 @@ import {
   listOrders,
   getEvents,
   sendMailsBatched,
+  sendMailsFiltered,
+  sendMailsByEmails,
   fetchAllMatchingOrderIds,
   Order,
   Event,
@@ -64,6 +66,10 @@ export default function SendMailsPage() {
   const [selectAllLoading, setSelectAllLoading] = useState(false);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [mode, setMode] = useState<"filter" | "bulk">("filter");
+  const [bulkEmailsText, setBulkEmailsText] = useState("");
+  const [bulkEventId, setBulkEventId] = useState("");
 
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendMailsResponse | null>(null);
@@ -144,19 +150,41 @@ export default function SendMailsPage() {
   };
 
   const handleSendMails = async () => {
-    if (selectedOrderIds.size === 0) return;
+    if (mode === "filter" && selectedOrderIds.size === 0 && !isSelectAll) return;
+
     setIsSending(true);
     setSendResult(null);
     setBatchProgress(null);
     try {
-      const orderIdsArray = Array.from(selectedOrderIds);
-      const res = await sendMailsBatched(orderIdsArray, (progress) => {
-        setBatchProgress(progress);
-      });
-      setSendResult(res);
-      setSelectedOrderIds(new Set());
-      setIsSelectAll(false);
-      await fetchOrders();
+      let res: SendMailsResponse | null = null;
+
+      if (mode === "bulk") {
+        const emails = Array.from(new Set((bulkEmailsText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi) || []).map(e => e.toLowerCase())));
+        if (emails.length === 0 || !bulkEventId) {
+          alert("Please provide valid emails and select an event.");
+          setIsSending(false);
+          return;
+        }
+        res = await sendMailsByEmails(emails, bulkEventId);
+      } else {
+        if (isSelectAll) {
+          // Use filter-based endpoint — server resolves matching IDs,
+          // so the eventId (and all other filters) are always enforced.
+          res = await sendMailsFiltered(filter);
+        } else {
+          const orderIdsArray = Array.from(selectedOrderIds);
+          res = await sendMailsBatched(orderIdsArray, (progress) => {
+            setBatchProgress(progress);
+          });
+        }
+      }
+
+      setSendResult(res ?? { sent: 0, failed: 0, results: [] });
+      if (mode === "filter") {
+        setSelectedOrderIds(new Set());
+        setIsSelectAll(false);
+        await fetchOrders();
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to send mails");
@@ -197,7 +225,7 @@ export default function SendMailsPage() {
             <h1 className="text-4xl font-heading tracking-wider text-white">SEND MAILS</h1>
             <p className="text-zinc-400 mt-1 text-sm">Send QR ticket emails to registered attendees</p>
           </div>
-          
+
           <form onSubmit={handleSearch} className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-72">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
@@ -206,48 +234,65 @@ export default function SendMailsPage() {
                 placeholder="Search ID, Name, Email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-10 bg-[#111] border border-[#333] rounded-lg pl-10 pr-4 text-sm text-white placeholder:text-zinc-600 focus:border-[#9AE600] focus:outline-none"
+                disabled={mode === "bulk"}
+                className="w-full h-10 bg-[#111] border border-[#333] rounded-lg pl-10 pr-4 text-sm text-white placeholder:text-zinc-600 focus:border-[#9AE600] focus:outline-none disabled:opacity-50"
               />
             </div>
-            <button type="submit" className="h-10 bg-[#9AE600] text-black px-5 rounded-lg font-medium text-sm hover:bg-[#8ad600] transition-colors whitespace-nowrap">
+            <button type="submit" disabled={mode === "bulk"} className="h-10 bg-[#9AE600] text-black px-5 rounded-lg font-medium text-sm hover:bg-[#8ad600] transition-colors whitespace-nowrap disabled:opacity-50">
               Search
             </button>
           </form>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 w-full max-w-[300px] mb-2 mt-2">
           <button
-            type="button"
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors border ${
-              filtersOpen || filterCount > 0
-                ? "bg-[#9AE600]/10 border-[#9AE600]/30 text-[#9AE600]"
-                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
-            }`}
+            onClick={() => setMode('filter')}
+            className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${mode === 'filter' ? 'bg-[#9AE600] text-black' : 'text-zinc-400 hover:text-white'}`}
           >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filters
-            {filterCount > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#9AE600] text-black text-[10px] font-bold">
-                {filterCount}
-              </span>
-            )}
-            {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            Filter & Search
           </button>
-
-          {filterCount > 0 && (
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-              Clear all
-            </button>
-          )}
+          <button
+            onClick={() => setMode('bulk')}
+            className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${mode === 'bulk' ? 'bg-[#9AE600] text-black' : 'text-zinc-400 hover:text-white'}`}
+          >
+            Bulk Send
+          </button>
         </div>
 
-        {filtersOpen && (
+        {mode === "filter" && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors border ${filtersOpen || filterCount > 0
+                ? "bg-[#9AE600]/10 border-[#9AE600]/30 text-[#9AE600]"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {filterCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#9AE600] text-black text-[10px] font-bold">
+                  {filterCount}
+                </span>
+              )}
+              {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {filterCount > 0 && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
+
+        {filtersOpen && mode === "filter" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 mt-1">
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
@@ -324,7 +369,7 @@ export default function SendMailsPage() {
           <button
             type="button"
             onClick={handleSendMails}
-            disabled={selectedOrderIds.size === 0 || isSending}
+            disabled={(mode === "filter" && selectedOrderIds.size === 0 && !isSelectAll) || isSending}
             className="bg-primary text-black px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSending ? (
@@ -332,43 +377,46 @@ export default function SendMailsPage() {
             ) : (
               <Send className="w-5 h-5" />
             )}
-            Send Mails ({selectedOrderIds.size})
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedOrderIds(new Set());
-              setIsSelectAll(false);
-              fetchOrders();
-            }}
-            className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className="w-5 h-5" />
+            {mode === "filter" ? `Send Mails (${isSelectAll ? total : selectedOrderIds.size})` : `Send Bulk Mails`}
           </button>
 
-          <div className="h-8 w-px bg-zinc-800 hidden md:block" />
+          {mode === "filter" && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOrderIds(new Set());
+                  setIsSelectAll(false);
+                  fetchOrders();
+                }}
+                className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
 
-          <button
-            type="button"
-            onClick={handleSelectAllMatching}
-            disabled={selectAllLoading || total === 0}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border ${
-              isSelectAll
-                ? "bg-[#9AE600]/10 border-[#9AE600]/30 text-[#9AE600]"
-                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {selectAllLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isSelectAll ? (
-              <CheckSquare className="w-4 h-4" />
-            ) : (
-              <Square className="w-4 h-4" />
-            )}
-            {isSelectAll ? `All ${total} selected` : `Select all ${total} matching`}
-          </button>
+              <div className="h-8 w-px bg-zinc-800 hidden md:block" />
+
+              <button
+                type="button"
+                onClick={handleSelectAllMatching}
+                disabled={selectAllLoading || total === 0}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border ${isSelectAll
+                  ? "bg-[#9AE600]/10 border-[#9AE600]/30 text-[#9AE600]"
+                  : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {selectAllLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isSelectAll ? (
+                  <CheckSquare className="w-4 h-4" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                {isSelectAll ? `All ${total} selected` : `Select all ${total} matching`}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
@@ -387,7 +435,7 @@ export default function SendMailsPage() {
             </div>
           )}
 
-          {selectedOrderIds.size > 0 && !isSelectAll && (
+          {mode === "filter" && selectedOrderIds.size > 0 && !isSelectAll && (
             <button
               type="button"
               onClick={() => { setSelectedOrderIds(new Set()); setIsSelectAll(false); }}
@@ -430,163 +478,205 @@ export default function SendMailsPage() {
       )}
 
       <div className="bg-zinc-900/40 border border-white/10 rounded-3xl backdrop-blur-xl overflow-hidden shadow-xl">
-
-        {allOnPageSelected && !isSelectAll && total > orders.length && (
-          <div className="bg-[#9AE600]/5 border-b border-[#9AE600]/10 px-6 py-3 flex items-center justify-center gap-2 text-sm">
-            <span className="text-zinc-300">
-              All <span className="text-white font-medium">{orders.length}</span> orders on this page are selected.
-            </span>
-            <button
-              type="button"
-              onClick={handleSelectAllMatching}
-              disabled={selectAllLoading}
-              className="text-[#9AE600] hover:text-white font-medium transition-colors inline-flex items-center gap-1"
-            >
-              {selectAllLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : null}
-              Select all {total} matching orders
-            </button>
-          </div>
-        )}
-
-        {isSelectAll && (
-          <div className="bg-[#9AE600]/10 border-b border-[#9AE600]/20 px-6 py-3 flex items-center justify-center gap-2 text-sm">
-            <CheckSquare className="w-4 h-4 text-[#9AE600]" />
-            <span className="text-white font-medium">
-              All {selectedOrderIds.size} matching orders are selected.
-            </span>
-            <button
-              type="button"
-              onClick={() => { setSelectedOrderIds(new Set()); setIsSelectAll(false); }}
-              className="text-zinc-400 hover:text-white font-medium transition-colors"
-            >
-              Clear selection
-            </button>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="p-12 flex justify-center text-primary">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-black/50 text-zinc-400 uppercase font-heading text-xs tracking-wider">
-                <tr>
-                  <th className="px-6 py-4 w-12 text-center">
-                    <button
-                      type="button"
-                      onClick={handleSelectAllOnPage}
-                      className="inline-flex items-center justify-center"
-                    >
-                      {allOnPageSelected && orders.length > 0 ? (
-                        <CheckSquare className="w-4.5 h-4.5 text-[#9AE600]" />
-                      ) : someOnPageSelected ? (
-                        <div className="w-4 h-4 rounded border-2 border-[#9AE600] bg-[#9AE600]/20" />
-                      ) : (
-                        <Square className="w-4.5 h-4.5 text-zinc-600" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-4">Order ID / Date</th>
-                  <th className="px-6 py-4">User Details</th>
-                  <th className="px-6 py-4">Event</th>
-                  <th className="px-6 py-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {orders.map((order) => (
-                  <tr key={order.id} className={`transition-colors ${selectedOrderIds.has(order.orderId) ? "bg-[#9AE600]/5" : "hover:bg-zinc-800/30"}`}>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleSelectOrder(order.orderId)}
-                        className="inline-flex items-center justify-center"
-                      >
-                        {selectedOrderIds.has(order.orderId) ? (
-                          <CheckSquare className="w-4.5 h-4.5 text-[#9AE600]" />
-                        ) : (
-                          <Square className="w-4.5 h-4.5 text-zinc-600 hover:text-zinc-400" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-mono text-white text-xs mb-1">{order.orderId}</div>
-                      <div className="text-xs text-zinc-500">{order.createdAt ? format(new Date(order.createdAt), "MMM d, yyyy") : "N/A"}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-white">{order.user?.name || "Unknown"}</div>
-                      <div className="text-xs text-zinc-400">{order.user?.email}</div>
-                      {order.user?.phone && <div className="text-xs text-zinc-500">{order.user.phone}</div>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-white max-w-[200px] truncate" title={order.event?.name}>{order.event?.name}</div>
-                      <div className="text-xs text-zinc-500">{order.quantity} Ticket(s)</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1.5 items-start">
-                        {order.mailed ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#1a2e00] text-[#9AE600] border border-[#9AE600]/20">
-                            <CheckCircle2 className="w-3 h-3" /> Mailed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800/50 text-zinc-400 border border-zinc-700/50">
-                            <Mail className="w-3 h-3" /> Not Mailed
-                          </span>
-                        )}
-                        {order.checkedIn && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800/50 text-zinc-300 border border-zinc-700/50">
-                            <ScanLine className="w-3 h-3" /> Scanned
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {orders.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 italic">
-                      No orders found matching your filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-        
-        {!loading && totalPages > 0 && (
-          <div className="bg-black/30 border-t border-white/5 px-6 py-4 flex items-center justify-between">
-            <span className="text-sm text-zinc-400">
-              Showing <span className="text-white font-medium">{orders.length > 0 ? (page - 1) * (filter.limit || 20) + 1 : 0}</span> to <span className="text-white font-medium">{Math.min(page * (filter.limit || 20), total)}</span> of <span className="text-white font-medium">{total}</span> results
-              {selectedOrderIds.size > 0 && (
-                <span className="ml-2 text-[#9AE600]">
-                  · {selectedOrderIds.size} selected
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-2">
-              <button 
-                type="button"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-1 rounded bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:hover:bg-zinc-800/50 transition-colors border border-white/5"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-zinc-400 px-2">{page} / {totalPages}</span>
-              <button 
-                type="button"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-1 rounded bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:hover:bg-zinc-800/50 transition-colors border border-white/5"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+        {mode === "bulk" ? (
+          <div className="p-6">
+            <h2 className="text-xl font-heading mb-4 text-white">Bulk Send Emails</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Select Event
+                </label>
+                <select
+                  value={bulkEventId}
+                  onChange={(e) => setBulkEventId(e.target.value)}
+                  className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white focus:border-[#9AE600] focus:outline-none cursor-pointer"
+                >
+                  <option value="" disabled>-- Select Event --</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Emails List (comma, space, or newline separated)
+                </label>
+                <textarea
+                  value={bulkEmailsText}
+                  onChange={(e) => setBulkEmailsText(e.target.value)}
+                  placeholder="name1@vitapstudent.ac.in, name2@gmail.com&#10;name3@example.com"
+                  className="w-full h-64 bg-[#111] border border-[#333] rounded-lg p-4 text-white focus:border-[#9AE600] focus:outline-none font-mono text-sm resize-y whitespace-pre-wrap leading-relaxed"
+                />
+                <div className="mt-2 text-sm text-zinc-500 flex items-center justify-between">
+                  <span>
+                    Detected valid emails: <strong className="text-zinc-300">{(bulkEmailsText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi) || []).length > 0 ? Array.from(new Set((bulkEmailsText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi) || []).map(e => e.toLowerCase()))).length : 0}</strong> unique entries
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+        ) : (
+          <>
+            {allOnPageSelected && !isSelectAll && total > orders.length && (
+              <div className="bg-[#9AE600]/5 border-b border-[#9AE600]/10 px-6 py-3 flex items-center justify-center gap-2 text-sm">
+                <span className="text-zinc-300">
+                  All <span className="text-white font-medium">{orders.length}</span> orders on this page are selected.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSelectAllMatching}
+                  disabled={selectAllLoading}
+                  className="text-[#9AE600] hover:text-white font-medium transition-colors inline-flex items-center gap-1"
+                >
+                  {selectAllLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : null}
+                  Select all {total} matching orders
+                </button>
+              </div>
+            )}
+
+            {isSelectAll && (
+              <div className="bg-[#9AE600]/10 border-b border-[#9AE600]/20 px-6 py-3 flex items-center justify-center gap-2 text-sm">
+                <CheckSquare className="w-4 h-4 text-[#9AE600]" />
+                <span className="text-white font-medium">
+                  All {selectedOrderIds.size} matching orders are selected.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedOrderIds(new Set()); setIsSelectAll(false); }}
+                  className="text-zinc-400 hover:text-white font-medium transition-colors"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="p-12 flex justify-center text-primary">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-black/50 text-zinc-400 uppercase font-heading text-xs tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4 w-12 text-center">
+                        <button
+                          type="button"
+                          onClick={handleSelectAllOnPage}
+                          className="inline-flex items-center justify-center"
+                        >
+                          {allOnPageSelected && orders.length > 0 ? (
+                            <CheckSquare className="w-4.5 h-4.5 text-[#9AE600]" />
+                          ) : someOnPageSelected ? (
+                            <div className="w-4 h-4 rounded border-2 border-[#9AE600] bg-[#9AE600]/20" />
+                          ) : (
+                            <Square className="w-4.5 h-4.5 text-zinc-600" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="px-6 py-4">Order ID / Date</th>
+                      <th className="px-6 py-4">User Details</th>
+                      <th className="px-6 py-4">Event</th>
+                      <th className="px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/50">
+                    {orders.map((order) => (
+                      <tr key={order.id} className={`transition-colors ${selectedOrderIds.has(order.orderId) ? "bg-[#9AE600]/5" : "hover:bg-zinc-800/30"}`}>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectOrder(order.orderId)}
+                            className="inline-flex items-center justify-center"
+                          >
+                            {selectedOrderIds.has(order.orderId) ? (
+                              <CheckSquare className="w-4.5 h-4.5 text-[#9AE600]" />
+                            ) : (
+                              <Square className="w-4.5 h-4.5 text-zinc-600 hover:text-zinc-400" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-white text-xs mb-1">{order.orderId}</div>
+                          <div className="text-xs text-zinc-500">{order.createdAt ? format(new Date(order.createdAt), "MMM d, yyyy") : "N/A"}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-white">{order.user?.name || "Unknown"}</div>
+                          <div className="text-xs text-zinc-400">{order.user?.email}</div>
+                          {order.user?.phone && <div className="text-xs text-zinc-500">{order.user.phone}</div>}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-white max-w-[200px] truncate" title={order.event?.name}>{order.event?.name}</div>
+                          <div className="text-xs text-zinc-500">{order.quantity} Ticket(s)</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {order.mailed ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#1a2e00] text-[#9AE600] border border-[#9AE600]/20">
+                                <CheckCircle2 className="w-3 h-3" /> Mailed
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800/50 text-zinc-400 border border-zinc-700/50">
+                                <Mail className="w-3 h-3" /> Not Mailed
+                              </span>
+                            )}
+                            {order.checkedIn && (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800/50 text-zinc-300 border border-zinc-700/50">
+                                <ScanLine className="w-3 h-3" /> Scanned
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {orders.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 italic">
+                          No orders found matching your filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {!loading && totalPages > 0 && (
+              <div className="bg-black/30 border-t border-white/5 px-6 py-4 flex items-center justify-between">
+                <span className="text-sm text-zinc-400">
+                  Showing <span className="text-white font-medium">{orders.length > 0 ? (page - 1) * (filter.limit || 20) + 1 : 0}</span> to <span className="text-white font-medium">{Math.min(page * (filter.limit || 20), total)}</span> of <span className="text-white font-medium">{total}</span> results
+                  {selectedOrderIds.size > 0 && (
+                    <span className="ml-2 text-[#9AE600]">
+                      · {selectedOrderIds.size} selected
+                    </span>
+                  )}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-1 rounded bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:hover:bg-zinc-800/50 transition-colors border border-white/5"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm text-zinc-400 px-2">{page} / {totalPages}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-1 rounded bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:hover:bg-zinc-800/50 transition-colors border border-white/5"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

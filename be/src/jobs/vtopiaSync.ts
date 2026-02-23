@@ -58,9 +58,8 @@ function parseProductMeta(rawMeta: string | null) {
   // All Prime events 
   if (metaLower.includes('all prime events')) {
     displayNames.push('All Prime Events');
-    if (!tokens.includes('DAY_1')) tokens.push('DAY_1');
-    if (!tokens.includes('DAY_2')) tokens.push('DAY_2');
-    if (!tokens.includes('DAY_3')) tokens.push('DAY_3');
+    if (!tokens.includes('PRANAV')) tokens.push('PRANAV');
+    if (!tokens.includes('UDAY')) tokens.push('UDAY');
   }
 
   // Create clean name
@@ -171,11 +170,11 @@ export async function syncRegistrations() {
           const targetOrderId = existingOrder?.orderId || reg.order_id || `VTOPIA-${reg.registration_id}`;
 
           let primaryToken = 'DAY_1';
-          if (parsedMeta.tokens.includes('PRANAV')) primaryToken = 'PRANAV';
-          else if (parsedMeta.tokens.includes('UDAY')) primaryToken = 'UDAY';
-          else if (parsedMeta.tokens.includes('DAY_1')) primaryToken = 'DAY_1';
+          if (parsedMeta.tokens.includes('DAY_1')) primaryToken = 'DAY_1';
           else if (parsedMeta.tokens.includes('DAY_2')) primaryToken = 'DAY_2';
           else if (parsedMeta.tokens.includes('DAY_3')) primaryToken = 'DAY_3';
+          else if (parsedMeta.tokens.includes('PRANAV')) primaryToken = 'PRANAV';
+          else if (parsedMeta.tokens.includes('UDAY')) primaryToken = 'UDAY';
           else if (parsedMeta.tokens.includes('TSHIRT')) primaryToken = 'TSHIRT';
 
           let event = await prisma.event.findFirst({

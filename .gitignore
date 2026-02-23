@@ -64,3 +64,8 @@ be/scripts/test-generation*.ts
 be/scripts/test-scan*.ts
 be/prisma/schema.prisma.patch
 *.base64.txt
+
+# Backups and data
+backups/
+pgadmin/
+*.sql

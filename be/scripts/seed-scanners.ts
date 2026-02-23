@@ -1,0 +1,84 @@
+import { prisma } from "../src/db/prisma.ts";
+
+async function seed() {
+    // 1. Find the DAY_1 event
+    const day1Event = await (prisma as any).event.findFirst({
+        where: { accessToken: "DAY_1" }
+    });
+
+    if (!day1Event) {
+        console.error("Error: DAY_1 event not found in database. Please run the main seed script first.");
+        process.exit(1);
+    }
+
+    const eventId = day1Event.id;
+    const now = BigInt(Date.now());
+
+    console.log(`Seeding scanners for event: ${day1Event.name} (${eventId})...`);
+
+    // Seed Male Scanners (20)
+    for (let i = 1; i <= 20; i++) {
+        const idStr = i.toString().padStart(3, "0");
+        const gateId = `SCAN-M-${idStr}`;
+        const name = `Male Scanner ${i}`;
+        const secret = `vitopia-m-${idStr}`;
+
+        await (prisma as any).gate.upsert({
+            where: { gateId },
+            update: {
+                name,
+                secret,
+                gender: "M",
+                isActive: true,
+            },
+            create: {
+                gateId,
+                name,
+                secret,
+                gender: "M",
+                eventId,
+                isActive: true,
+                createdAt: now,
+            },
+        });
+    }
+
+    // Seed Female Scanners (20)
+    for (let i = 1; i <= 20; i++) {
+        const idStr = i.toString().padStart(3, "0");
+        const gateId = `SCAN-F-${idStr}`;
+        const name = `Female Scanner ${i}`;
+        const secret = `vitopia-f-${idStr}`;
+
+        await (prisma as any).gate.upsert({
+            where: { gateId },
+            update: {
+                name,
+                secret,
+                gender: "F",
+                isActive: true,
+            },
+            create: {
+                gateId,
+                name,
+                secret,
+                gender: "F",
+                eventId,
+                isActive: true,
+                createdAt: now,
+            },
+        });
+    }
+
+    console.log("Seeding complete! 40 scanners updated/created.");
+}
+
+seed()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await (prisma as any).$disconnect();
+        process.exit(0);
+    });

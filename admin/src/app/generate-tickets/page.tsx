@@ -22,6 +22,9 @@ import {
   Mail,
   MailCheck,
   X,
+  Users,
+  User,
+  DownloadCloud,
 } from "lucide-react";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
@@ -50,14 +53,19 @@ export default function GenerateTicketsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
-  // Form state
+  // Modes
+  const [mode, setMode] = useState<"single" | "bulk">("single");
+
+  // Form state (Single)
   const [eventId, setEventId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [registrationId, setRegistrationId] = useState("");
   const quantity = 1;
 
-  // Extract regNo from email like rishi.23bce8982@vitapstudent.ac.in → 23BCE8982
+  // Form state (Bulk)
+  const [bulkText, setBulkText] = useState("");
+
   const extractRegNo = (emailStr: string): string => {
     const match = emailStr.match(/\.(\d{2}[a-zA-Z]{2,4}\d{3,5})@/);
     return match ? match[1].toUpperCase() : "";
@@ -70,6 +78,12 @@ export default function GenerateTicketsPage() {
     return `${prefix}${rest}`;
   };
 
+  const extractEmails = (text: string) => {
+    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+    const matches = text.match(emailRegex) || [];
+    return Array.from(new Set(matches.map(m => m.toLowerCase())));
+  };
+
   const handleEmailChange = (val: string) => {
     setEmail(val);
     const extracted = extractRegNo(val);
@@ -79,7 +93,7 @@ export default function GenerateTicketsPage() {
   // Submission state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState<"" | "user" | "order" | "pay" | "done">("");
+  const [step, setStep] = useState<string>("");
 
   // Results
   const [generatedTickets, setGeneratedTickets] = useState<GeneratedTicket[]>([]);
@@ -95,11 +109,11 @@ export default function GenerateTicketsPage() {
     setName("");
     setEmail("");
     setRegistrationId("");
-            setError("");
+    setError("");
     setStep("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSingleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventId || !name.trim() || !email.trim()) return;
 
@@ -107,8 +121,7 @@ export default function GenerateTicketsPage() {
     setError("");
 
     try {
-      // Step 1: Create or find user
-      setStep("user");
+      setStep("Creating user...");
       const userResult = await createUser({
         email: email.trim(),
         name: name.trim(),
@@ -116,12 +129,9 @@ export default function GenerateTicketsPage() {
         college: "VIT-AP University",
       });
 
-      if (!userResult) {
-        throw new Error("Failed to create user. Please check the details and try again.");
-      }
+      if (!userResult) throw new Error("Failed to create user");
 
-      // Step 2: Create order
-      setStep("order");
+      setStep("Creating order...");
       const orderResult = await createOrder({
         userId: userResult.userId,
         eventId,
@@ -129,21 +139,13 @@ export default function GenerateTicketsPage() {
         registrationId: registrationId.trim() || undefined,
       });
 
-      if (!orderResult) {
-        throw new Error("Failed to create order. The event may be full or unavailable.");
-      }
+      if (!orderResult) throw new Error("Failed to create order");
 
-      // Step 3: Mark as paid + generate QR
-      setStep("pay");
+      setStep("Generating QR & marking paid...");
       const payResult = await payOrder(orderResult.orderId);
 
-      if (!payResult) {
-        throw new Error(
-          `Order ${orderResult.orderId} created but payment marking failed. Mark it as paid manually from the Orders page.`
-        );
-      }
+      if (!payResult) throw new Error("Payment marking failed");
 
-      // Success
       const selectedEvent = events.find((ev) => ev.id === eventId);
       setGeneratedTickets((prev) => [
         {
@@ -157,12 +159,79 @@ export default function GenerateTicketsPage() {
         ...prev,
       ]);
 
-      setStep("done");
+      setStep("Ticket generated!");
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setSubmitting(false);
+      setTimeout(() => setStep(""), 2000);
+    }
+  };
+
+  const handleBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventId || !bulkText.trim()) return;
+
+    const emails = extractEmails(bulkText);
+    if (emails.length === 0) {
+      setError("No valid emails found in the pasted text.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const newTickets: GeneratedTicket[] = [];
+      const selectedEvent = events.find((ev) => ev.id === eventId);
+      const evName = selectedEvent ? formatEventName(selectedEvent.name) : "Unknown Event";
+
+      for (let i = 0; i < emails.length; i++) {
+        const mail = emails[i];
+        setStep(`Processing ${i + 1}/${emails.length}... (${mail})`);
+
+        try {
+          const userResult = await createUser({
+            email: mail,
+            name: mail, // Name is email as requested
+            phone: randomPhone(),
+            college: "VIT-AP University",
+          });
+          if (!userResult) throw new Error("Failed to create user");
+
+          const orderResult = await createOrder({
+            userId: userResult.userId,
+            eventId,
+            quantity: 1,
+            registrationId: undefined, // No reg no
+          });
+          if (!orderResult) throw new Error("Failed to create order");
+
+          const payResult = await payOrder(orderResult.orderId);
+          if (!payResult) throw new Error("Failed to mark paid");
+
+          newTickets.push({
+            orderId: payResult.orderId,
+            qrCode: payResult.qrCode,
+            userName: mail,
+            userEmail: mail,
+            eventName: evName,
+            timestamp: Date.now(),
+          });
+        } catch (innerErr) {
+          console.error(`Failed for ${mail}`, innerErr);
+        }
+      }
+
+      setGeneratedTickets((prev) => [...newTickets, ...prev]);
+      setStep(`Generated ${newTickets.length} tickets successfully!`);
+      setBulkText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setSubmitting(false);
+      setTimeout(() => setStep(""), 3000);
     }
   };
 
@@ -174,6 +243,7 @@ export default function GenerateTicketsPage() {
 
   const [sendingMailFor, setSendingMailFor] = useState<string | null>(null);
   const [mailedTickets, setMailedTickets] = useState<Set<string>>(new Set());
+  const [massMailing, setMassMailing] = useState(false);
 
   const handleSendMail = async (orderId: string) => {
     if (sendingMailFor || mailedTickets.has(orderId)) return;
@@ -188,15 +258,55 @@ export default function GenerateTicketsPage() {
     }
   };
 
-  const stepLabels: Record<string, string> = {
-    user: "Creating user...",
-    order: "Creating order...",
-    pay: "Generating QR & marking paid...",
-    done: "Ticket generated!",
+  const handleMassMailAll = async () => {
+    const unmailed = generatedTickets.filter(t => !mailedTickets.has(t.orderId));
+    if (unmailed.length === 0) {
+      alert("All visible tickets have already been mailed.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to mass mail ${unmailed.length} tickets?`)) return;
+
+    setMassMailing(true);
+    try {
+      const orderIds = unmailed.map(t => t.orderId);
+
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < orderIds.length; i += CHUNK_SIZE) {
+        const chunk = orderIds.slice(i, i + CHUNK_SIZE);
+        await sendMails(chunk);
+      }
+
+      const newMailed = new Set(mailedTickets);
+      orderIds.forEach(id => newMailed.add(id));
+      setMailedTickets(newMailed);
+      alert("Mass mail completed successfully!");
+    } catch (err) {
+      alert("Failed mass mail. Please try again.");
+    } finally {
+      setMassMailing(false);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (generatedTickets.length === 0) return;
+    if (!confirm(`Are you sure you want to download ${generatedTickets.length} QR codes?`)) return;
+
+    for (let i = 0; i < generatedTickets.length; i++) {
+      const ticket = generatedTickets[i];
+      const a = document.createElement("a");
+      a.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/orders/${ticket.orderId}/qr-image`;
+      a.download = `ticket-${ticket.orderId}.png`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      await new Promise(r => setTimeout(r, 200));
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-12">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-12 pb-24">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Header */}
         <header className="border-b border-[#333] pb-6">
@@ -212,8 +322,26 @@ export default function GenerateTicketsPage() {
           </p>
         </header>
 
+        {/* Mode Toggle */}
+        <div className="flex bg-[#111] p-1 rounded-lg border border-[#333] max-w-sm">
+          <button
+            onClick={() => setMode("single")}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${mode === "single" ? "bg-[#9AE600] text-black shadow" : "text-gray-400 hover:text-white"
+              }`}
+          >
+            <User className="w-4 h-4" /> Single
+          </button>
+          <button
+            onClick={() => setMode("bulk")}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${mode === "bulk" ? "bg-[#9AE600] text-black shadow" : "text-gray-400 hover:text-white"
+              }`}
+          >
+            <Users className="w-4 h-4" /> Bulk Import
+          </button>
+        </div>
+
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={mode === "single" ? handleSingleSubmit : handleBulkSubmit} className="space-y-6">
           {/* Event Selector */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">
@@ -230,11 +358,10 @@ export default function GenerateTicketsPage() {
                     key={ev.id}
                     type="button"
                     onClick={() => setEventId(ev.id)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      eventId === ev.id
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${eventId === ev.id
                         ? "bg-[#9AE600] text-black"
                         : "bg-[#1a1a1a] text-gray-400 hover:text-white border border-[#333] hover:border-[#9AE600]/40"
-                    }`}
+                      }`}
                   >
                     {formatEventName(ev.name)}
                   </button>
@@ -243,49 +370,68 @@ export default function GenerateTicketsPage() {
             )}
           </div>
 
-          {/* User Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {mode === "single" ? (
+            /* User Details - Single */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  placeholder="john@example.com"
+                  required
+                  className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Registration Number
+                </label>
+                <input
+                  type="text"
+                  value={registrationId}
+                  onChange={(e) => setRegistrationId(e.target.value)}
+                  placeholder="e.g. 22BCE1234"
+                  className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
+                />
+              </div>
+            </div>
+          ) : (
+            /* Bulk Paste Area */
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                Full Name <span className="text-red-500">*</span>
+                Paste Emails <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+              <textarea
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder="Paste text containing emails, e.g.&#10;pujitha.23bce20090@vitapstudent.ac.in&#10;sreenivasulu.23bce20188@vitapstudent.ac.in"
+                rows={8}
                 required
-                className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
+                className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors resize-y"
               />
+              <p className="text-xs text-gray-500 mt-2">
+                Emails will be auto-detected. The email will be used as the name, and registration number will be empty.
+                Detected: {extractEmails(bulkText).length} email(s).
+              </p>
             </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => handleEmailChange(e.target.value)}
-                placeholder="john@example.com"
-                required
-                className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                Registration Number
-              </label>
-              <input
-                type="text"
-                value={registrationId}
-                onChange={(e) => setRegistrationId(e.target.value)}
-                placeholder="e.g. 22BCE1234"
-                className="w-full bg-[#111] border border-[#333] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#9AE600] transition-colors"
-              />
-            </div>
-
-
-          </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -296,17 +442,18 @@ export default function GenerateTicketsPage() {
           )}
 
           {/* Progress */}
-          {submitting && step && (
-            <div className="flex items-center gap-3 bg-[#9AE600]/5 border border-[#9AE600]/20 text-[#9AE600] px-4 py-3 rounded-lg text-sm">
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>{stepLabels[step] || "Processing..."}</span>
+          {step && (
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm ${submitting ? "bg-[#9AE600]/5 border border-[#9AE600]/20 text-[#9AE600]" : "bg-zinc-800/50 border border-zinc-700 text-zinc-300"}`}>
+              {submitting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+              {!submitting && <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />}
+              <span>{step}</span>
             </div>
           )}
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={submitting || !eventId || !name.trim() || !email.trim()}
+            disabled={submitting || !eventId || (mode === "single" ? (!name.trim() || !email.trim()) : !bulkText.trim())}
             className="w-full bg-[#9AE600] hover:bg-[#8ad600] text-black font-semibold py-3.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
           >
             {submitting ? (
@@ -314,7 +461,7 @@ export default function GenerateTicketsPage() {
             ) : (
               <>
                 <Plus className="w-5 h-5" />
-                Generate Ticket
+                {mode === "single" ? "Generate Ticket" : `Generate ${extractEmails(bulkText).length > 0 ? extractEmails(bulkText).length : "Bulk"} Tickets`}
               </>
             )}
           </button>
@@ -322,15 +469,36 @@ export default function GenerateTicketsPage() {
 
         {/* Generated Tickets */}
         {generatedTickets.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-[#9AE600]" />
-              Recently Generated ({generatedTickets.length})
-            </h2>
+          <section className="mt-12 pt-8 border-t border-[#333]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-[#9AE600]" />
+                Generated Tickets ({generatedTickets.length})
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleMassMailAll}
+                  disabled={massMailing || generatedTickets.every(t => mailedTickets.has(t.orderId))}
+                  className="px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-300 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {massMailing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  Mass Mail All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadAll}
+                  className="px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-gray-300 hover:text-white hover:border-[#9AE600]/40 transition-all flex items-center justify-center gap-2"
+                >
+                  <DownloadCloud className="w-4 h-4" /> Download All
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-3">
-              {generatedTickets.map((ticket) => (
+              {generatedTickets.map((ticket, i) => (
                 <div
-                  key={ticket.orderId}
+                  key={`${ticket.orderId}-${i}`}
                   className="bg-[#111] border border-[#333] rounded-lg p-4 flex flex-col sm:flex-row items-start gap-4"
                 >
                   {/* QR Code */}
@@ -413,3 +581,4 @@ export default function GenerateTicketsPage() {
     </div>
   );
 }
+

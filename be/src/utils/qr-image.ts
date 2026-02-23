@@ -79,32 +79,44 @@ export async function generateStyledQRImage(qrToken: string): Promise<Buffer> {
   const imgPx = size * MODULE_PX;
 
   // ── Cache Logo rendering ──
-  if (!cachedLogoPng || cachedLogoMeta?.imgPx !== imgPx) {
-    const logoRaw = readFileSync(LOGO_PATH);
-    const logoMeta = await sharp(logoRaw).metadata();
-    const origW = logoMeta.width ?? 400;
-    const origH = logoMeta.height ?? 300;
-    const maxLogoW = Math.floor(imgPx * LOGO_RATIO);
-    const scale = maxLogoW / origW;
-    const logoW = Math.floor(origW * scale);
-    const logoH = Math.floor(origH * scale);
+  if (!cachedLogoMeta || cachedLogoMeta.imgPx !== imgPx) {
+    let logoRaw: Buffer | null = null;
+    try {
+      logoRaw = readFileSync(LOGO_PATH);
+    } catch (e) {
+      console.warn("Could not read vitopia-small.png for QR logo", e);
+    }
 
-    const { data: logoPixels } = await sharp(logoRaw)
-      .resize(logoW, logoH, { fit: "fill" })
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    if (logoRaw) {
+      const logoMeta = await sharp(logoRaw).metadata();
+      const origW = logoMeta.width ?? 400;
+      const origH = logoMeta.height ?? 300;
+      const maxLogoW = Math.floor(imgPx * LOGO_RATIO);
+      const scale = maxLogoW / origW;
+      const logoW = Math.floor(origW * scale);
+      const logoH = Math.floor(origH * scale);
 
-    cachedLogoPng = await sharp(logoPixels, {
-      raw: { width: logoW, height: logoH, channels: 4 },
-    })
-      .png()
-      .toBuffer();
+      const { data: logoPixels } = await sharp(logoRaw)
+        .resize(logoW, logoH, { fit: "fill" })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
 
-    cachedLogoMeta = { logoW, logoH, imgPx };
+      cachedLogoPng = await sharp(logoPixels, {
+        raw: { width: logoW, height: logoH, channels: 4 },
+      })
+        .png()
+        .toBuffer();
+
+      cachedLogoMeta = { logoW, logoH, imgPx };
+    } else {
+      cachedLogoMeta = { logoW: 0, logoH: 0, imgPx };
+      cachedLogoPng = null;
+    }
   }
 
-  const { logoW, logoH } = cachedLogoMeta;
+  const logoW = cachedLogoMeta.logoW;
+  const logoH = cachedLogoMeta.logoH;
 
   // Logo center position in pixels
   const bx = Math.floor((imgPx - logoW) / 2);
@@ -112,10 +124,10 @@ export async function generateStyledQRImage(qrToken: string): Promise<Buffer> {
 
   // Module range to leave empty under logo (+ 1 module breathing room)
   const pad = 1;
-  const colS = Math.max(0, Math.floor(bx / MODULE_PX) - pad);
-  const colE = Math.min(size, Math.ceil((bx + logoW) / MODULE_PX) + pad);
-  const rowS = Math.max(0, Math.floor(by / MODULE_PX) - pad);
-  const rowE = Math.min(size, Math.ceil((by + logoH) / MODULE_PX) + pad);
+  const colS = cachedLogoPng ? Math.max(0, Math.floor(bx / MODULE_PX) - pad) : -1;
+  const colE = cachedLogoPng ? Math.min(size, Math.ceil((bx + logoW) / MODULE_PX) + pad) : -1;
+  const rowS = cachedLogoPng ? Math.max(0, Math.floor(by / MODULE_PX) - pad) : -1;
+  const rowE = cachedLogoPng ? Math.min(size, Math.ceil((by + logoH) / MODULE_PX) + pad) : -1;
 
   // ── Build SVG with rounded-square gradient dots ──
   const rects: string[] = [];
@@ -144,10 +156,14 @@ export async function generateStyledQRImage(qrToken: string): Promise<Buffer> {
   // ── Render SVG → PNG, composite logo on top ──
   const basePng = await sharp(Buffer.from(svg)).png().toBuffer();
 
-  return sharp(basePng)
-    .composite([{ input: cachedLogoPng!, left: bx, top: by, blend: "over" }])
-    .png()
-    .toBuffer();
+  if (cachedLogoPng) {
+    return sharp(basePng)
+      .composite([{ input: cachedLogoPng, left: bx, top: by, blend: "over" }])
+      .png()
+      .toBuffer();
+  }
+
+  return basePng;
 }
 
 /** Returns a base64 data URL of the styled QR PNG (for email attachments). */
