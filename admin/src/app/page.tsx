@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
+import {
   QrCode,
   Activity,
   Mail,
@@ -11,16 +11,17 @@ import {
   ArrowRight,
   ClipboardList
 } from "lucide-react";
-import { 
-  authenticateDashboard, 
-  getDashboardData, 
-  DashboardData 
+import {
+  authenticateDashboard,
+  getDashboardData,
+  DashboardData
 } from "@/lib/api";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
   "Vitopia2026-Day1": "Pro-Show Day-1",
   "Vitopia2026-Day2": "Pro-Show Day-2",
   "Vitopia2026-Day3": "Pro-Show Day-3",
+  "Day 3 Proshow": "FINAL PROSHOW (Day 3)",
 };
 
 function formatEventName(name: string): string {
@@ -86,7 +87,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
-    
+
     try {
       const resToken = await authenticateDashboard(pin);
       if (resToken) {
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
           <div className="flex justify-center mb-6">
             <Lock className="w-8 h-8 text-[#9AE600]" />
           </div>
-          
+
           <h1 className="text-2xl font-semibold text-center mb-2">
             Admin Login
           </h1>
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
               className="w-full bg-[#1a1a1a] border border-[#333] rounded px-4 py-3 text-center text-lg focus:outline-none focus:border-[#9AE600] text-white placeholder:text-gray-600"
               required
             />
-            
+
             {authError && (
               <p className="text-red-500 text-sm text-center">
                 {authError}
@@ -175,7 +176,7 @@ export default function AdminDashboard() {
             <p className="text-gray-500 text-base">Event management & analytics</p>
           </div>
           <div className="mt-4 md:mt-0 flex items-center gap-4">
-            <button 
+            <button
               type="button"
               onClick={() => {
                 localStorage.removeItem("adminToken");
@@ -244,11 +245,10 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setSelectedEventId("all")}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    selectedEventId === "all"
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedEventId === "all"
                       ? "bg-[#9AE600] text-black"
                       : "bg-[#1a1a1a] text-gray-400 hover:text-white border border-[#333]"
-                  }`}
+                    }`}
                 >
                   All Events
                 </button>
@@ -257,11 +257,10 @@ export default function AdminDashboard() {
                     type="button"
                     key={event.eventId}
                     onClick={() => setSelectedEventId(event.eventId)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      selectedEventId === event.eventId
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedEventId === event.eventId
                         ? "bg-[#9AE600] text-black"
                         : "bg-[#1a1a1a] text-gray-400 hover:text-white border border-[#333]"
-                    }`}
+                      }`}
                   >
                     {formatEventName(event.eventName)}
                   </button>
@@ -272,12 +271,12 @@ export default function AdminDashboard() {
           {filteredEvents.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filteredEvents.map((event) => (
-                <AnalyticsCard 
+                <AnalyticsCard
                   key={event.eventId}
-                  day={formatEventName(event.eventName)} 
-                  scanned={event.checkedIn} 
-                  entered={event.checkedIn} 
-                  total={event.sold} 
+                  day={formatEventName(event.eventName)}
+                  scanned={event.checkedIn}
+                  entered={event.checkedIn}
+                  total={event.sold}
                 />
               ))}
             </div>
@@ -299,8 +298,8 @@ export default function AdminDashboard() {
               </p>
             </div>
           </div>
-          <a 
-            href="/orders" 
+          <a
+            href="/orders"
             className="w-full sm:w-auto px-6 py-3 bg-[#9AE600] text-black font-medium rounded hover:bg-[#8ad600] transition-colors"
           >
             View Orders
@@ -321,7 +320,7 @@ function AnalyticsCard({ day, scanned, entered, total }: { day: string, scanned:
         <h3 className="font-medium">{day}</h3>
         <span className="text-xs text-gray-500">{total} total</span>
       </div>
-      
+
       <div className="space-y-4">
         <div>
           <div className="flex justify-between text-sm mb-1">

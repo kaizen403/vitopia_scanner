@@ -48,6 +48,7 @@ const EVENT_NAME_BY_TOKEN: Record<string, string> = {
   DAY_1: "Pro Show Day 1",
   DAY_2: "Pro Show Day 2",
   DAY_3: "Pro Show Day 3",
+  PROSHOW3: "Day 3 Proshow",
   PRANAV: "Pranav Sharma Stand Up",
   UDAYA: "Uday Boddeda Stand Up",
   TSHIRT: "T-Shirt Distribution",
@@ -57,6 +58,7 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
   DAY_1: 1,
   DAY_2: 2,
   DAY_3: 3,
+  PROSHOW3: 0, // Prioritize for Day 3
   PRANAV: 4,
   UDAYA: 5,
   TSHIRT: 6,
@@ -66,6 +68,7 @@ function formatEventName(name: string): string {
   if (name === "Vitopia2026-Day1") return "Pro Show Day 1";
   if (name === "Vitopia2026-Day2") return "Pro Show Day 2";
   if (name === "Vitopia2026-Day3") return "Pro Show Day 3";
+  if (name === "Day 3 Proshow") return "Day 3 Final Proshow";
   if (name.includes("Pranav Sharma")) return "Pranav Sharma Stand Up";
   if (name.includes("Sarat Raja Uday Boddeda") || name.includes("Uday")) return "Uday Boddeda Stand Up";
   return name;
@@ -559,7 +562,7 @@ export default function Home() {
               }
             }
           }
-        } catch (_) {}
+        } catch (_) { }
 
         if (isActive) {
           historyRafIdRef.current = requestAnimationFrame(scanLoop);
@@ -686,9 +689,9 @@ export default function Home() {
                       {orderedEvents
                         .filter((ev) => ev.accessToken)
                         .sort((a, b) => {
-                          const enabled = ["DAY_1", "PRANAV"];
-                          const aEnabled = enabled.includes(a.accessToken ?? "");
-                          const bEnabled = enabled.includes(b.accessToken ?? "");
+                          const enabledTokens = ["PROSHOW3", "DAY_3"];
+                          const aEnabled = enabledTokens.includes(a.accessToken ?? "");
+                          const bEnabled = enabledTokens.includes(b.accessToken ?? "");
                           if (aEnabled && !bEnabled) return -1;
                           if (!aEnabled && bEnabled) return 1;
                           return 0;
@@ -705,11 +708,10 @@ export default function Home() {
                                 setSelectedEvent(event);
                                 setDropdownOpen(false);
                               }}
-                              className={`w-full px-4 py-3.5 text-left text-sm flex items-center gap-3 border-b border-[#1a1a1a] last:border-b-0 transition-colors ${
-                                enabled
-                                  ? "text-white hover:bg-[#9AE600]/10"
-                                  : "text-[#555] cursor-not-allowed opacity-40"
-                              }`}
+                              className={`w-full px-4 py-3.5 text-left text-sm flex items-center gap-3 border-b border-[#1a1a1a] last:border-b-0 transition-colors ${enabled
+                                ? "text-white hover:bg-[#9AE600]/10"
+                                : "text-[#555] cursor-not-allowed opacity-40"
+                                }`}
                             >
                               <Calendar className={`w-4 h-4 shrink-0 ${enabled ? "text-[#9AE600]" : "text-[#555]"}`} />
                               <span>{getEventDisplayName(event)}</span>
@@ -967,13 +969,12 @@ export default function Home() {
           <div className="w-full max-w-sm">
             {/* Status indicator — floating above the card */}
             <div className="flex flex-col items-center mb-5">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${
-                status === "success"
-                  ? "bg-[#9AE600]/15 ring-2 ring-[#9AE600]/30"
-                  : status === "already_used"
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${status === "success"
+                ? "bg-[#9AE600]/15 ring-2 ring-[#9AE600]/30"
+                : status === "already_used"
                   ? "bg-yellow-500/15 ring-2 ring-yellow-500/30"
                   : "bg-red-500/15 ring-2 ring-red-500/30"
-              }`}>
+                }`}>
                 {status === "success" ? (
                   <CheckCircle className="w-7 h-7 text-[#9AE600]" />
                 ) : status === "already_used" ? (
@@ -982,31 +983,29 @@ export default function Home() {
                   <XCircle className="w-8 h-8 text-red-500" />
                 )}
               </div>
-              <h2 className={`text-xl font-bold tracking-wider ${
-                status === "success"
-                  ? "text-[#9AE600]"
-                  : status === "already_used"
+              <h2 className={`text-xl font-bold tracking-wider ${status === "success"
+                ? "text-[#9AE600]"
+                : status === "already_used"
                   ? "text-yellow-500"
                   : "text-red-500"
-              }`}>
+                }`}>
                 {status === "success"
                   ? "ENTRY ALLOWED"
                   : status === "already_used"
-                  ? "ALREADY SCANNED"
-                  : "ENTRY DENIED"}
+                    ? "ALREADY SCANNED"
+                    : "ENTRY DENIED"}
               </h2>
             </div>
 
             {/* Info card */}
             <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl overflow-hidden shadow-2xl">
               {/* Top accent bar */}
-              <div className={`h-1 w-full ${
-                status === "success"
-                  ? "bg-[#9AE600]"
-                  : status === "already_used"
+              <div className={`h-1 w-full ${status === "success"
+                ? "bg-[#9AE600]"
+                : status === "already_used"
                   ? "bg-yellow-500"
                   : "bg-red-500"
-              }`} />
+                }`} />
 
               <div className="divide-y divide-[#1a1a1a]">
                 {/* Previously scanned warning */}
@@ -1018,12 +1017,12 @@ export default function Home() {
                         <p className="text-sm text-yellow-400 font-medium mt-0.5">
                           {formatTime(
                             lastResult?.checkedInAt ??
-                              scanHistory.find(
-                                (entry) =>
-                                  entry.orderId === (lastResult?.data?.orderId ?? "") &&
-                                  entry.status === "success"
-                              )?.timestamp ??
-                              Date.now()
+                            scanHistory.find(
+                              (entry) =>
+                                entry.orderId === (lastResult?.data?.orderId ?? "") &&
+                                entry.status === "success"
+                            )?.timestamp ??
+                            Date.now()
                           )}
                         </p>
                       </div>
@@ -1092,11 +1091,10 @@ export default function Home() {
                 lastScannedRef.current = "";
               }}
               type="button"
-              className={`w-full mt-4 py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${
-                status === "success"
-                  ? "bg-[#9AE600] text-black hover:bg-[#8AD500]"
-                  : "bg-white/10 text-white hover:bg-white/15"
-              }`}
+              className={`w-full mt-4 py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${status === "success"
+                ? "bg-[#9AE600] text-black hover:bg-[#8AD500]"
+                : "bg-white/10 text-white hover:bg-white/15"
+                }`}
             >
               <Camera className="w-5 h-5" />
               Next Scan

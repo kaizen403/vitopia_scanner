@@ -104,8 +104,17 @@ export function buildEmailHtml(data: TicketEmailData): string {
                 <!-- Event Details Header -->
                 <tr>
                   <td class="padded-sm" style="padding:24px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                    <span style="display:block;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Accessing Event</span>
-                    <h3 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">${data.eventName}</h3>
+                    <div style="display:flex; justify-content: space-between; align-items: flex-start;">
+                      <div>
+                        <span style="display:block;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Accessing Event</span>
+                        <h3 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">${data.eventName}</h3>
+                      </div>
+                      ${data.eventName.toLowerCase().includes('day 3') ? `
+                      <div style="background:rgba(154,230,0,0.15); border:1px solid rgba(154,230,0,0.3); border-radius:6px; padding:4px 8px;">
+                        <span style="color:#9AE600; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Final Night</span>
+                      </div>
+                      ` : ''}
+                    </div>
                   </td>
                 </tr>
                 
@@ -164,6 +173,14 @@ export function buildEmailHtml(data: TicketEmailData): string {
                   </tr>
                   <tr>
                     <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
+                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Gate Entry:</strong> Please enter via the Main Stadium Gate for the Proshow.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
+                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Timing:</strong> Gates open at 5:00 PM. Event ends at 10:00 PM.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
                     <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">One-time entry.</strong> Management reserves the right to frisk for security.</td>
                   </tr>
                   <tr>
@@ -171,12 +188,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
                     <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">No re-entry</strong> once you exit the venue perimeter.</td>
                   </tr>
                   <tr>
-                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
-                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Prohibited:</strong> Alcohol, tobacco, substances, weapons, outside food/drinks.</td>
-                  </tr>
-                  <tr>
                     <td style="vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
-                    <td><strong style="color:rgba(255,255,255,0.6);">Arrive early</strong> — at least 30 minutes before the event.</td>
+                    <td><strong style="color:rgba(255,255,255,0.6);">Arrive early</strong> — arrive by 5:30 PM to avoid long queues.</td>
                   </tr>
                 </table>
               </div>
@@ -250,7 +263,9 @@ export async function prepareTicketEmailPayload(orderId: string, emailOverride?:
   return {
     from: FROM_EMAIL,
     to: [recipientEmail],
-    subject: `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
+    subject: order.event?.accessToken === 'PROSHOW3'
+      ? `Final Proshow Day 3: Your VITopia '26 Ticket`
+      : `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
     html: buildEmailHtml({
       name: order.user?.name || "Attendee",
       orderId: order.orderId,
@@ -364,7 +379,9 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
   const { data, error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to: [recipientEmail],
-    subject: `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
+    subject: order.event?.accessToken === 'PROSHOW3'
+      ? `Final Proshow Day 3: Your VITopia '26 Ticket`
+      : `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
     html: buildEmailHtml({
       name: order.user?.name || "Attendee",
       orderId: order.orderId,

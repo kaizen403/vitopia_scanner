@@ -18,3 +18,4 @@ describe("GET /health", () => {
     expect(Date.parse(response.body.timestamp)).not.toBeNaN();
   });
 });
+
