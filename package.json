@@ -1,5 +1,5 @@
 {
-  "name": "vitopia-fest",
+  "name": "praana-fest",
   "version": "1.0.0",
   "private": true,
   "description": "Fest Entry Verification System - Monorepo",
@@ -21,7 +21,8 @@
     "redis:down": "docker compose down",
     "redis:logs": "docker compose logs -f redis",
     "start:all": "pnpm run redis:up && pnpm run dev",
-    "backup": "node backup.js"
+    "backup": "node backup.js",
+    "test": "pnpm --filter be test"
   },
   "packageManager": "pnpm@10.27.0",
   "pnpm": {
