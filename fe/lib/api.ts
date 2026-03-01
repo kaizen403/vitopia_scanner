@@ -2,6 +2,8 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development" ? "http://localhost:3001" : "");
 
+const API_KEY = process.env.NEXT_PUBLIC_PRAANA_API_KEY || "";
+
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -16,8 +18,10 @@ async function fetchApi<T>(
   try {
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
         ...options.headers,
       },
     });
@@ -34,6 +38,15 @@ async function fetchApi<T>(
 }
 
 // Events
+export interface Slot {
+  id: string;
+  eventId: string;
+  startTime: number;
+  endTime: number;
+  capacity: number;
+  createdAt: number;
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -43,6 +56,8 @@ export interface Event {
   capacity: number;
   price: number;
   isActive: boolean;
+  type: "EVENT" | "WORKSHOP";
+  slots?: Slot[];
   accessToken?: string | null;
   category?: string;
   scanOrder?: number;
@@ -65,6 +80,13 @@ export interface EventStats {
   totalCheckedIn: number;
   totalRevenue: number;
   capacityRemaining: number;
+  slotStats?: {
+    slotId: string;
+    startTime: number;
+    endTime: number;
+    sold: number;
+    remaining: number;
+  }[];
 }
 
 export async function getEventStats(id: string): Promise<EventStats | null> {
@@ -105,6 +127,7 @@ export interface Order {
   orderId: string;
   userId: string;
   eventId: string;
+  slotId?: string | null;
   quantity: number;
   totalAmount: number;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
@@ -112,12 +135,14 @@ export interface Order {
   checkedInAt?: number;
   event?: Event;
   user?: User;
+  slot?: { id: string; startTime: number; endTime: number } | null;
   qrCode?: string;
 }
 
 export async function createOrder(data: {
   userId: string;
   eventId: string;
+  slotId?: string;
   quantity: number;
 }): Promise<{ id: string; orderId: string; totalAmount: number } | null> {
   const response = await fetchApi<{ id: string; orderId: string; totalAmount: number }>(
@@ -271,4 +296,208 @@ export async function lookupTicketHistory(
   });
 
   return response.json();
+}
+// Dashboard
+export interface DashboardData {
+  analytics: {
+    totalTicketsSold: number;
+    totalCheckedIn: number;
+    totalRemaining: number;
+    events: {
+      eventId: string;
+      eventName: string;
+      sold: number;
+      checkedIn: number;
+      remaining: number;
+      capacity: number;
+    }[];
+  };
+  scanLogs: {
+    orderId: string;
+    scanResult: string;
+    scannedBy: string;
+    gate: string;
+    timestamp: number;
+    eventName: string;
+    userName: string;
+    userEmail: string;
+  }[];
+}
+
+export async function getDashboardData(): Promise<DashboardData | null> {
+  const response = await fetchApi<DashboardData>("/api/dashboard/data");
+  return response.data || null;
+}
+
+export async function authenticateDashboard(pin: string): Promise<string | null> {
+  const response = await fetchApi<string>("/api/dashboard/auth", {
+    method: "POST",
+    body: JSON.stringify({ pin })
+  });
+  return response.data || null;
+}
+
+// Orders management
+export interface OrderFilter {
+  search?: string;
+  paymentStatus?: string;
+  eventId?: string;
+  mailed?: string;
+  checkedIn?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ListOrdersResponse {
+  orders: Order[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export async function listOrders(filter: OrderFilter): Promise<ListOrdersResponse | null> {
+  const params = new URLSearchParams();
+  if (filter.search) params.append("search", filter.search);
+  if (filter.paymentStatus) params.append("paymentStatus", filter.paymentStatus);
+  if (filter.eventId) params.append("eventId", filter.eventId);
+  if (filter.mailed) params.append("mailed", filter.mailed);
+  if (filter.checkedIn) params.append("checkedIn", filter.checkedIn);
+  if (filter.dateFrom) params.append("dateFrom", filter.dateFrom);
+  if (filter.dateTo) params.append("dateTo", filter.dateTo);
+  if (filter.page) params.append("page", filter.page.toString());
+  if (filter.limit) params.append("limit", filter.limit.toString());
+
+  const response = await fetchApi<ListOrdersResponse>(`/api/orders?${params.toString()}`);
+  return response.data || null;
+}
+
+export async function fetchAllMatchingOrderIds(filter: Omit<OrderFilter, 'page' | 'limit'>): Promise<string[]> {
+  const params = new URLSearchParams();
+  if (filter.search) params.append("search", filter.search);
+  if (filter.paymentStatus) params.append("paymentStatus", filter.paymentStatus);
+  if (filter.eventId) params.append("eventId", filter.eventId);
+  if (filter.mailed) params.append("mailed", filter.mailed);
+  if (filter.checkedIn) params.append("checkedIn", filter.checkedIn);
+  if (filter.dateFrom) params.append("dateFrom", filter.dateFrom);
+  if (filter.dateTo) params.append("dateTo", filter.dateTo);
+
+  const response = await fetchApi<string[]>(`/api/orders/ids?${params.toString()}`);
+  return response.data || [];
+}
+
+export async function updateOrder(orderId: string, data: Partial<Order>): Promise<Order | null> {
+  const response = await fetchApi<Order>(`/api/orders/${orderId}`, {
+    method: "PUT",
+    body: JSON.stringify(data)
+  });
+  return response.data || null;
+}
+
+export async function deleteOrder(orderId: string): Promise<boolean> {
+  const response = await fetchApi<boolean>(`/api/orders/${orderId}`, {
+    method: "DELETE"
+  });
+  return !!response.success;
+}
+
+// Mail
+export interface SendMailResult {
+  orderId: string;
+  status: "sent" | "failed";
+  error?: string;
+}
+
+export interface SendMailsResponse {
+  sent: number;
+  failed: number;
+  results: SendMailResult[];
+}
+
+export async function sendMails(orderIds: string[]): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send", {
+    method: "POST",
+    body: JSON.stringify({ orderIds }),
+  });
+  return response.data || null;
+}
+
+/**
+ * Send emails for all orders matching the given filter — filter is applied
+ * server-side, so no large ID arrays are sent over the wire.
+ */
+export async function sendMailsFiltered(
+  filter: Omit<OrderFilter, "page" | "limit">
+): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send-filtered", {
+    method: "POST",
+    body: JSON.stringify({ ...filter }),
+  });
+  return response.data || null;
+}
+
+export async function sendMailsByEmails(
+  emails: string[],
+  eventId: string
+): Promise<SendMailsResponse | null> {
+  const response = await fetchApi<SendMailsResponse>("/api/mail/send-by-emails", {
+    method: "POST",
+    body: JSON.stringify({ emails, eventId }),
+  });
+  return response.data || null;
+}
+
+const MAIL_BATCH_SIZE = 30;
+
+export interface BatchMailProgress {
+  sent: number;
+  failed: number;
+  total: number;
+  batchIndex: number;
+  totalBatches: number;
+  done: boolean;
+}
+
+export async function sendMailsBatched(
+  orderIds: string[],
+  onProgress: (progress: BatchMailProgress) => void,
+  signal?: AbortSignal
+): Promise<SendMailsResponse> {
+  const totalBatches = Math.ceil(orderIds.length / MAIL_BATCH_SIZE);
+  let totalSent = 0;
+  let totalFailed = 0;
+  const allResults: SendMailResult[] = [];
+
+  for (let i = 0; i < totalBatches; i++) {
+    if (signal?.aborted) break;
+
+    const batch = orderIds.slice(i * MAIL_BATCH_SIZE, (i + 1) * MAIL_BATCH_SIZE);
+    try {
+      const res = await sendMails(batch);
+      if (res) {
+        totalSent += res.sent;
+        totalFailed += res.failed;
+        allResults.push(...res.results);
+      } else {
+        totalFailed += batch.length;
+        allResults.push(...batch.map(id => ({ orderId: id, status: "failed" as const, error: "No response" })));
+      }
+    } catch (err: unknown) {
+      totalFailed += batch.length;
+      const errMsg = err instanceof Error ? err.message : "Network error";
+      allResults.push(...batch.map(id => ({ orderId: id, status: "failed" as const, error: errMsg })));
+    }
+
+    onProgress({
+      sent: totalSent,
+      failed: totalFailed,
+      total: orderIds.length,
+      batchIndex: i + 1,
+      totalBatches,
+      done: i === totalBatches - 1,
+    });
+  }
+
+  return { sent: totalSent, failed: totalFailed, results: allResults };
 }

@@ -5,13 +5,13 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOGO_PATH = join(__dirname, "../assets/vitopia-small.png");
+const LOGO_PATH = join(__dirname, "../assets/praana-small.png");
 
 const BG_COLOR = "#FFFFFF";
 const MODULE_PX = 22;   // pixels per QR module
 const DOT_RADIUS = 4;    // rounded corner radius
 
-// Red → orange gradient (pulled from VITopia logo palette)
+// Red → orange gradient (pulled from PRAANA logo palette)
 const GRAD_START = { r: 180, g: 10, b: 0 };
 const GRAD_END = { r: 200, g: 100, b: 0 };
 
@@ -68,7 +68,7 @@ let cachedLogoMeta: { logoW: number; logoH: number; imgPx: number } | null = nul
 let cachedLogoPng: Buffer | null = null;
 
 /**
- * Generates a styled VITopia QR code PNG buffer.
+ * Generates a styled PRAANA QR code PNG buffer.
  *
  * The encoded token (HMAC data) is identical to the plain QR —
  * only the visual rendering changes. Auth & scan logic are untouched.
@@ -84,7 +84,7 @@ export async function generateStyledQRImage(qrToken: string): Promise<Buffer> {
     try {
       logoRaw = readFileSync(LOGO_PATH);
     } catch (e) {
-      console.warn("Could not read vitopia-small.png for QR logo", e);
+      console.warn("Could not read praana-small.png for QR logo", e);
     }
 
     if (logoRaw) {

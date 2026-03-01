@@ -60,7 +60,7 @@ async function run() {
     const day1Event = await prisma.event.findFirst({
         where: {
             OR: [
-                { name: "Vitopia2026-Day1" },
+                { name: "Praana2026-Day1" },
                 { accessToken: "DAY_1" }
             ],
             isActive: true
@@ -90,7 +90,7 @@ async function run() {
                         email,
                         name: email, // use email as name, like UI does
                         phone: randomPhone(),
-                        college: "VIT-AP University",
+                        college: "PIMS University",
                         createdAt: BigInt(Date.now())
                     }
                 });

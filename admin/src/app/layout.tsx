@@ -14,10 +14,10 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "VITopia '26 | Admin",
-  description: "VIT AP International Cultural and Sports Fest 2026 - Admin Dashboard",
+  title: "PRAANA '26 | Admin",
+  description: "PIMS International Cultural and Sports Fest 2026 - Admin Dashboard",
   icons: {
-    icon: "https://vitopia.vitap.ac.in/favicon.ico",
+    icon: "https://praana.pims.ac.in/favicon.ico",
   },
 };
 

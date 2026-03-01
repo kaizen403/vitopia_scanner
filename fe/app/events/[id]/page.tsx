@@ -33,6 +33,7 @@ export default function EventDetailPage({
   });
   const [orderId, setOrderId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<string>("");
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -44,6 +45,9 @@ export default function EventDetailPage({
     try {
       const data = await getEvent(id);
       setEvent(data);
+      if (data?.type === "WORKSHOP" && data.slots?.length) {
+        setSelectedSlotId(data.slots[0].id);
+      }
     } catch (error) {
       console.error("Failed to load event:", error);
     } finally {
@@ -54,6 +58,11 @@ export default function EventDetailPage({
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (!event) return;
+
+    if (event.type === "WORKSHOP" && !selectedSlotId) {
+      alert("Please select a workshop slot.");
+      return;
+    }
 
     setProcessing(true);
     try {
@@ -68,6 +77,7 @@ export default function EventDetailPage({
       const orderResult = await createOrder({
         userId: userResult.userId,
         eventId: event.id,
+        slotId: event.type === "WORKSHOP" ? selectedSlotId : undefined,
         quantity,
       });
 
@@ -99,9 +109,9 @@ export default function EventDetailPage({
 
       setQrCode(result.qrCode);
       setStep("success");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment error:", error);
-      alert("An error occurred. Please try again.");
+      alert(error.message || "An error occurred. Please try again.");
     } finally {
       setProcessing(false);
     }
@@ -195,6 +205,48 @@ export default function EventDetailPage({
                   </div>
                 </div>
               </div>
+
+              {event.type === "WORKSHOP" && event.slots && (
+                <div className="mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    Select Workshop Slot
+                  </h4>
+                  <div className="grid gap-4">
+                    {event.slots.map((slot) => (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setSelectedSlotId(slot.id)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${selectedSlotId === slot.id
+                            ? "border-indigo-600 bg-white dark:bg-gray-800 shadow-md ring-2 ring-indigo-600 ring-opacity-10"
+                            : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 hover:border-indigo-300"
+                          }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-900 dark:text-white">
+                              {new Date(slot.startTime).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })} - {new Date(slot.endTime).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {slot.capacity} available slots
+                            </p>
+                          </div>
+                          {selectedSlotId === slot.id && (
+                            <CheckCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex items-center justify-between mb-6">

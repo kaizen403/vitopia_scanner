@@ -2,42 +2,42 @@ import "dotenv/config";
 import crypto from "crypto";
 import { prisma as basePrisma } from "../src/db/prisma.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
-import { syncRegistrations } from "../src/jobs/vtopiaSync.js";
+import { syncRegistrations } from "../src/jobs/praanaSync.js";
 
 const prisma = basePrisma as unknown as PrismaClient;
 
 const EVENT_SEEDS = [
   {
-    name: "Vitopia2026-Day1",
-    description: "VITopia 2026 - Day 1",
-    venue: "VIT-AP Campus",
+    name: "Praana2026-Day1",
+    description: "PRAANA 2026 - Day 1",
+    venue: "PIMS Campus",
     date: "1771734600000",
     category: "day" as const,
     scanOrder: 1,
     accessToken: "DAY_1",
   },
   {
-    name: "Vitopia2026-Day2",
-    description: "VITopia 2026 - Day 2",
-    venue: "VIT-AP Campus",
+    name: "Praana2026-Day2",
+    description: "PRAANA 2026 - Day 2",
+    venue: "PIMS Campus",
     date: "1771821000000",
     category: "day" as const,
     scanOrder: 2,
     accessToken: "DAY_2",
   },
   {
-    name: "Vitopia2026-Day3",
-    description: "VITopia 2026 - Day 3",
-    venue: "VIT-AP Campus",
+    name: "Praana2026-Day3",
+    description: "PRAANA 2026 - Day 3",
+    venue: "PIMS Campus",
     date: "1771907400000",
     category: "day" as const,
     scanOrder: 3,
-    accessToken: "DAY_3",
+    accessToken: "PROSHOW3",
   },
   {
     name: "Mr. Pranav Sharma on 22 Feb 2026 from 2.30 PM to 3.30 PM",
     description: "Speaker Event - Mr. Pranav Sharma",
-    venue: "VIT-AP Campus",
+    venue: "PIMS Campus",
     date: "1771750800000",
     category: "speaker" as const,
     scanOrder: 4,
@@ -46,16 +46,16 @@ const EVENT_SEEDS = [
   {
     name: "Mr. Sarat Raja Uday Boddeda on 23rd Feb 2026 from 2.30 PM to 3.30 PM",
     description: "Speaker Event - Mr. Sarat Raja Uday Boddeda",
-    venue: "VIT-AP Campus",
+    venue: "PIMS Campus",
     date: "1771837200000",
     category: "speaker" as const,
     scanOrder: 5,
     accessToken: "UDAY",
   },
   {
-    name: "VITopia 2026 T-Shirt Distribution",
+    name: "PRAANA 2026 T-Shirt Distribution",
     description: "T-Shirt Distribution Counter",
-    venue: "VIT-AP Campus",
+    venue: "PIMS Campus",
     date: "1771903800000",
     category: "distribution" as const,
     scanOrder: 6,
@@ -271,7 +271,7 @@ async function main() {
   const gateCount = await seedGates();
   console.log(`Seeded ${gateCount} gates.`);
 
-  console.log("\n=== Step 4: Syncing registrations from VTOPIA API ===");
+  console.log("\n=== Step 4: Syncing registrations from PRAANA API ===");
   await syncRegistrations();
 
   await verify();

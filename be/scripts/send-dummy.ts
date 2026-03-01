@@ -14,7 +14,7 @@ async function main() {
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #222;border-radius:16px;overflow:hidden;">
         <tr><td style="background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:40px 32px;border-bottom:1px solid #222;">
-          <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VITopia <span style="color:#9AE600;">'26</span></h1>
+          <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">PRAANA <span style="color:#9AE600;">'26</span></h1>
           <p style="margin:8px 0 0;color:#666;font-size:14px;">Your ticket is ready</p>
         </td></tr>
         <tr><td style="padding:32px;">
@@ -36,7 +36,7 @@ async function main() {
           <p style="margin:0;font-size:13px;color:#555;line-height:1.5;">This is a test email. No real ticket is attached.</p>
         </td></tr>
         <tr><td style="padding:20px 32px;background:#0a0a0a;border-top:1px solid #1a1a1a;">
-          <p style="margin:0;font-size:12px;color:#444;text-align:center;">VIT-AP University · Amaravati, AP · vitap.ac.in</p>
+          <p style="margin:0;font-size:12px;color:#444;text-align:center;">PIMS University · Amaravati, AP · pims.ac.in</p>
         </td></tr>
       </table>
     </td></tr>
@@ -44,12 +44,12 @@ async function main() {
 </body>
 </html>`;
 
-    console.log("Sending test email to rishi.23bce8982@vitapstudent.ac.in...");
+    console.log("Sending test email to rishi.23bce8982@pimsstudent.ac.in...");
 
     const { data, error } = await resend.emails.send({
-        from: "VITopia '26 <tickets@vitap.ac.in>",
-        to: ["rishi.23bce8982@vitapstudent.ac.in"],
-        subject: "Your VITopia '26 Ticket — Pro Show - Day 1 (TEST)",
+        from: "PRAANA '26 <tickets@pims.ac.in>",
+        to: ["rishi.23bce8982@pimsstudent.ac.in"],
+        subject: "Your PRAANA '26 Ticket — Pro Show - Day 1 (TEST)",
         html,
     });
 

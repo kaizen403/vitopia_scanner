@@ -48,7 +48,7 @@ const EVENT_NAME_BY_TOKEN: Record<string, string> = {
   DAY_1: "Pro Show Day 1",
   DAY_2: "Pro Show Day 2",
   DAY_3: "Pro Show Day 3",
-  PROSHOW3: "Day 3 Proshow",
+  PROSHOW3: "Pro Show Day 3",
   PRANAV: "Pranav Sharma Stand Up",
   UDAYA: "Uday Boddeda Stand Up",
   TSHIRT: "T-Shirt Distribution",
@@ -58,17 +58,16 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
   DAY_1: 1,
   DAY_2: 2,
   DAY_3: 3,
-  PROSHOW3: 0, // Prioritize for Day 3
+  PROSHOW3: 0,
   PRANAV: 4,
   UDAYA: 5,
   TSHIRT: 6,
 };
 
 function formatEventName(name: string): string {
-  if (name === "Vitopia2026-Day1") return "Pro Show Day 1";
-  if (name === "Vitopia2026-Day2") return "Pro Show Day 2";
-  if (name === "Vitopia2026-Day3") return "Pro Show Day 3";
-  if (name === "Day 3 Proshow") return "Day 3 Final Proshow";
+  if (name === "Praana2026-Day1") return "Pro Show Day 1";
+  if (name === "Praana2026-Day2") return "Pro Show Day 2";
+  if (name === "Praana2026-Day3" || name === "Day 3 Proshow") return "Pro Show Day 3";
   if (name.includes("Pranav Sharma")) return "Pranav Sharma Stand Up";
   if (name.includes("Sarat Raja Uday Boddeda") || name.includes("Uday")) return "Uday Boddeda Stand Up";
   return name;
@@ -643,16 +642,11 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
         <header className="border-b border-[#1a1a1a] bg-black/90 backdrop-blur-sm safe-top">
-          <div className="max-w-md mx-auto px-4 py-5 flex items-center justify-center">
-            <Image
-              src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
-              alt="VITopia"
-              width={240}
-              height={75}
-              className="h-16 w-auto"
-              unoptimized
-              priority
-            />
+          <div className="max-w-md mx-auto px-4 py-6 flex items-center justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-white font-heading text-4xl tracking-tight">PRAANA</span>
+              <span className="text-[#9AE600] font-heading text-lg mt-2">'26</span>
+            </div>
           </div>
         </header>
 
@@ -689,7 +683,7 @@ export default function Home() {
                       {orderedEvents
                         .filter((ev) => ev.accessToken)
                         .sort((a, b) => {
-                          const enabledTokens = ["PROSHOW3", "DAY_3"];
+                          const enabledTokens = ["DAY_1", "DAY_2", "DAY_3", "PRANAV", "UDAYA", "PROSHOW3", "TSHIRT"];
                           const aEnabled = enabledTokens.includes(a.accessToken ?? "");
                           const bEnabled = enabledTokens.includes(b.accessToken ?? "");
                           if (aEnabled && !bEnabled) return -1;
@@ -697,7 +691,7 @@ export default function Home() {
                           return 0;
                         })
                         .map((event) => {
-                          const enabled = ["DAY_1", "PRANAV"].includes(event.accessToken ?? "");
+                          const enabled = ["DAY_1", "DAY_2", "DAY_3", "PRANAV", "UDAYA", "PROSHOW3", "TSHIRT"].includes(event.accessToken ?? "");
                           return (
                             <button
                               type="button"
@@ -796,8 +790,8 @@ export default function Home() {
         </main>
 
         <footer className="border-t border-[#1a1a1a] py-3 safe-bottom">
-          <div className="max-w-md mx-auto px-4 text-center text-[#99A1AF] text-xs">
-            <p>VITopia &apos;26 Entry Scanner · built by <em className="italic">AIR</em></p>
+          <div className="max-w-md mx-auto px-4 text-center text-[#99A1AF]/50 text-xs">
+            <p>PRAANA &apos;26 Entry Scanner · built by <em className="italic">Cytieq</em></p>
           </div>
         </footer>
       </div>

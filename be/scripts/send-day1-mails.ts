@@ -39,7 +39,7 @@ if (fs.existsSync(envPath)) {
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 const JWT_SECRET = process.env.JWT_SECRET || "Salt123";
-const MAIL_FROM = process.env.MAIL_FROM || "VITopia '26 <tickets@vitap.ac.in>";
+const MAIL_FROM = process.env.MAIL_FROM || "PRAANA '26 <tickets@pims.ac.in>";
 
 if (!RESEND_API_KEY) {
     console.error("[fatal] RESEND_API_KEY is not set. Aborting.");
@@ -70,7 +70,7 @@ const { Resend } = await import("resend");
 const resend = new Resend(RESEND_API_KEY);
 
 // Logo (optional – same path the mail util uses)
-const logoPath = path.join(path.resolve(process.cwd(), "src"), "assets/vitopia-small.png");
+const logoPath = path.join(path.resolve(process.cwd(), "src"), "assets/praana-small.png");
 let logoBuffer: Buffer | null = null;
 try { logoBuffer = fs.readFileSync(logoPath); } catch { }
 
@@ -174,14 +174,14 @@ for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
                 payloads.push({
                     from: MAIL_FROM,
                     to: [email],
-                    subject: `Your VITopia '26 Ticket — ${order.event?.name ?? "Pro Show"}`,
+                    subject: `Your PRAANA '26 Ticket — ${order.event?.name ?? "Pro Show"}`,
                     html: buildEmailHtml({
                         name: order.user?.name ?? "Attendee",
                         orderId: order.orderId,
                         eventName: order.event?.name ?? "Pro Show (Day 1)",
                         quantity: order.quantity,
                         date: formattedDate,
-                        venue: order.event?.venue ?? "VIT-AP Campus",
+                        venue: order.event?.venue ?? "PIMS Campus",
                         email,
                     }),
                     attachments,

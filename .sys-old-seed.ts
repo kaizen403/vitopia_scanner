@@ -29,7 +29,7 @@ async function main() {
   );
 
   console.log("\n=== Step 2: Seeding fresh data ===");
-  const seedResult = await convex.mutation(api.users.seedVitopia, {});
+  const seedResult = await convex.mutation(api.users.seedPraana, {});
   console.log(
     `Seeded: ${seedResult.day1Orders} Day1 orders, ${seedResult.day2Orders} Day2 orders`
   );

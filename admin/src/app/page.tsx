@@ -18,10 +18,9 @@ import {
 } from "@/lib/api";
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
-  "Vitopia2026-Day1": "Pro-Show Day-1",
-  "Vitopia2026-Day2": "Pro-Show Day-2",
-  "Vitopia2026-Day3": "Pro-Show Day-3",
-  "Day 3 Proshow": "FINAL PROSHOW (Day 3)",
+  "Praana2026-Day1": "Pro-Show Day-1",
+  "Praana2026-Day2": "Pro-Show Day-2",
+  "Praana2026-Day3": "Pro-Show Day-3",
 };
 
 function formatEventName(name: string): string {

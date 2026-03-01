@@ -37,7 +37,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const events = await prisma.event.findMany({
     where: {
       name: {
-        notIn: ["Event Registration", "VITopia 2026", "IGNORE_ME_ARCHIVED"]
+        notIn: ["Event Registration", "PRAANA 2026", "IGNORE_ME_ARCHIVED"]
       },
       isActive: true
     }

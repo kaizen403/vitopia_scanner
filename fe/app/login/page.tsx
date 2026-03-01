@@ -46,20 +46,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Image
-            src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
-            alt="VITopia"
-            width={240}
-            height={75}
-            className="h-16 w-auto mx-auto mb-6"
-            unoptimized
-          />
-          <h1 className="font-heading text-3xl tracking-wide text-white mb-2">
-            SCANNER LOGIN
+        <div className="text-center mb-10">
+          <div className="flex items-center justify-center gap-1.5 mb-6">
+            <span className="text-white font-heading text-6xl tracking-tight">PRAANA</span>
+            <span className="text-[#9AE600] font-heading text-2xl mt-4 leading-none">'26</span>
+          </div>
+          <h1 className="font-heading text-2xl tracking-wide text-white mb-2">
+            SYSTEM LOGIN
           </h1>
           <p className="text-[#99A1AF] text-sm">
-            Enter your credentials to access the scanner
+            Enter your credentials to access the portal
           </p>
         </div>
 
@@ -69,14 +65,14 @@ export default function LoginPage() {
               htmlFor="username"
               className="block text-xs text-[#99A1AF] uppercase tracking-wider mb-2"
             >
-              Gate ID (e.g. M-01)
+              Username / Gate ID
             </label>
             <input
               id="username"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value.toUpperCase())}
-              placeholder="M-01 or F-01"
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. M-01, F-01 or Admin ID"
               required
               disabled={loading}
               autoComplete="username"
@@ -127,8 +123,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-[#99A1AF] text-xs mt-8">
-          VITopia &apos;26 Entry Scanner · built by <em className="italic">AIR</em>
+        <p className="text-center text-[#99A1AF]/50 text-xs mt-10">
+          PRAANA &apos;26 Entry Scanner · built by <em className="italic">Cytieq</em>
         </p>
       </div>
     </div>

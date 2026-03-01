@@ -91,9 +91,16 @@ function EventCard({ event }: { event: Event }) {
         <Calendar className="w-12 h-12 text-white/80" />
       </div>
       <div className="p-6">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          {event.name}
-        </h3>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {event.name}
+          </h3>
+          {event.type === "WORKSHOP" && (
+            <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-full uppercase tracking-wider">
+              Workshop
+            </span>
+          )}
+        </div>
         <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
           {event.description}
         </p>

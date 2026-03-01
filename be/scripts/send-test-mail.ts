@@ -17,7 +17,7 @@ if (fs.existsSync(envPath)) {
 }
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const MAIL_FROM = process.env.MAIL_FROM || "VITopia '26 <tickets@vitap.ac.in>";
+const MAIL_FROM = process.env.MAIL_FROM || "PRAANA '26 <tickets@pims.ac.in>";
 
 import { generateQRCode } from "../src/utils/qr-code.js";
 import { generateStyledQRImage } from "../src/utils/qr-image.js";
@@ -27,7 +27,7 @@ async function run() {
     const { Resend } = await import("resend");
     const resend = new Resend(RESEND_API_KEY);
 
-    const logoPath = path.join(path.resolve(process.cwd(), "src"), "assets/vitopia-small.png");
+    const logoPath = path.join(path.resolve(process.cwd(), "src"), "assets/praana-small.png");
     let logoBuffer: Buffer | null = null;
     try { logoBuffer = fs.readFileSync(logoPath); } catch { }
 
@@ -66,14 +66,14 @@ async function run() {
     const payload = {
         from: MAIL_FROM,
         to: [testEmail],
-        subject: `Your VITopia '26 Ticket — Pro Show (Day 1)`,
+        subject: `Your PRAANA '26 Ticket — Pro Show (Day 1)`,
         html: buildEmailHtml({
             name: "Surya Theja (Test)",
             orderId: testOrderId,
             eventName: "Pro Show (Day 1)",
             quantity: 1,
             date: formattedDate,
-            venue: "VIT-AP Campus",
+            venue: "PIMS Campus",
             email: testEmail,
         }),
         attachments,

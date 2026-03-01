@@ -1,7 +1,9 @@
 import { Router, Request, Response } from "express";
 import { sendTicketEmail } from "../utils/mail.js";
+import { apiKeyAuthMiddleware } from "../middleware/auth.js";
 
 const router: Router = Router();
+router.use(apiKeyAuthMiddleware);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

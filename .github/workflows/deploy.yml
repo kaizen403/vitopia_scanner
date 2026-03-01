@@ -19,4 +19,4 @@ jobs:
             git pull origin main
             pnpm install --frozen-lockfile || pnpm install
             pnpm run render:build
-            pm2 restart vitopia
+            pm2 restart praana

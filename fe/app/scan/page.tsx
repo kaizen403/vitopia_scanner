@@ -39,9 +39,9 @@ const EVENT_SORT_BY_TOKEN: Record<string, number> = {
 
 function getEventDisplayName(event: Event): string {
   const token = event.accessToken ?? "";
-  if (event.name === "Vitopia2026-Day1") return "Vitopia Day 1";
-  if (event.name === "Vitopia2026-Day2") return "Vitopia Day 2";
-  if (event.name === "Vitopia2026-Day3") return "Vitopia Day 3";
+  if (event.name === "Praana2026-Day1") return "Praana Day 1";
+  if (event.name === "Praana2026-Day2") return "Praana Day 2";
+  if (event.name === "Praana2026-Day3") return "Praana Day 3";
   if (event.name.includes("Mr. Pranav Sharma")) return "Mr. Pranav Sharma";
   if (event.name.includes("Sarat Raja Uday Boddeda")) return "Mr. Sarat Raja Uday Boddeda";
   return EVENT_NAME_BY_TOKEN[token] ?? event.name;
@@ -280,23 +280,28 @@ export default function ScannerPage() {
     };
   }, [stream]);
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      localStorage.removeItem("gateId");
+      localStorage.removeItem("gateSecret");
+      window.location.href = "/login";
+    } catch { }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
       <header className="border-b border-[#1a1a1a] bg-black/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 hover:bg-[#1a1a1a] rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-[#9AE600]" />
-            </Link>
-            <Image
-              src="https://vitopia.vitap.ac.in/_next/image?url=%2Fvitopia-color.webp&w=256&q=75"
-              alt="VITopia"
-              width={140}
-              height={45}
-              className="h-10 w-auto"
-              unoptimized
-            />
+            <button onClick={handleLogout} className="p-2 hover:bg-[#1a1a1a] rounded-lg transition-colors text-red-500" title="Log Out">
+              <ArrowLeft className="w-5 h-5 text-red-500" />
+            </button>
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-white font-heading text-3xl tracking-tight">PRAANA</span>
+              <span className="text-[#9AE600] font-heading text-sm mt-1">'26</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -408,10 +413,10 @@ export default function ScannerPage() {
           {status !== "idle" && status !== "scanning" && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center ${status === "success"
-                  ? "bg-[#9AE600]/90"
-                  : status === "already_used"
-                    ? "bg-yellow-500/90"
-                    : "bg-red-500/90"
+                ? "bg-[#9AE600]/90"
+                : status === "already_used"
+                  ? "bg-yellow-500/90"
+                  : "bg-red-500/90"
                 }`}
             >
               {status === "success" ? (
@@ -555,7 +560,7 @@ export default function ScannerPage() {
       {/* Footer */}
       <footer className="border-t border-[#1a1a1a] py-4">
         <div className="max-w-lg mx-auto px-4 text-center text-[#99A1AF] text-sm">
-          <p>VITopia &apos;26 Entry Scanner</p>
+          <p>PRAANA &apos;26 Entry Scanner</p>
         </div>
       </footer>
     </div>

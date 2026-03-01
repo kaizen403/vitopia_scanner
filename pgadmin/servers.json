@@ -1,7 +1,7 @@
 {
   "Servers": {
     "1": {
-      "Name": "VITopia Fest DB",
+      "Name": "PRAANA Fest DB",
       "Group": "Servers",
       "Host": "opus-postgres",
       "Port": 5432,

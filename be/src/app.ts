@@ -16,6 +16,10 @@ import authRoutes from "./routes/auth.js";
 import { errorHandler } from "./middleware/auth.js";
 import { getDatabaseReadiness } from "./db/readiness.js";
 
+import helmet from "helmet";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+
 type AppOptions = {
   enableNotFound?: boolean;
   getDatabaseHealth?: () => Promise<{ connected: boolean; error?: string }>;
@@ -27,15 +31,26 @@ export const createApp = ({
 }: AppOptions = {}): express.Express => {
   const app = express();
 
+  // Production security headers
+  app.use(helmet({
+    contentSecurityPolicy: false,
+  }));
+
+  // Gzip compression
+  app.use(compression());
+
   // Middleware — allow same-origin (combined server) + dev origins + droplet IP
   const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:3002",
+    "http://localhost:3003", // Added main app local port
     "http://157.245.97.218",
     "https://157.245.97.218",
-    "https://scanner.vitap.in",
-    "http://scanner.vitap.in",
+    "https://scanner.pims.in",
+    "http://scanner.pims.in",
+    "https://scanner.cytieq.com",
+    "https://praana.pims.in",
     process.env.FRONTEND_URL,
     process.env.RENDER_EXTERNAL_URL,
   ].filter(Boolean) as string[];
@@ -47,12 +62,31 @@ export const createApp = ({
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(null, true); // permissive — tighten in production if needed
+          // Tighten security: only allow whitelisted origins
+          console.warn(`[CORS Block] Forbidden origin: ${origin}`);
+          callback(null, false);
         }
       },
       credentials: true,
     })
   );
+
+  // Global rate limiter
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: { success: false, error: "Too many requests. Slow down." }
+  });
+  app.use("/api/", generalLimiter);
+
+  // Auth rate limiter
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    message: { success: false, error: "Too many login attempts." }
+  });
+  app.use("/api/auth/", authLimiter);
+
   app.use(express.json());
 
   // Health check

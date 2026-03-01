@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import { createApp } from "./app.js";
-import { startVtopiaCronJob } from "./jobs/vtopiaSync.js";
+import { startPraanaCronJob } from "./jobs/praanaSync.js";
 import { validateDatabaseUrl } from "./db/readiness.js";
 
 const parseDatabaseUrlOrThrow = (): URL => {
@@ -25,8 +26,8 @@ try {
 const app = createApp();
 const PORT = process.env.PORT || 3001;
 
-// Start background sync jobs
-startVtopiaCronJob();
+// Start background sync jobs (Disabled in favor of Internal API)
+// startPraanaCronJob();
 
 // Start server
 app.listen(PORT, () => {

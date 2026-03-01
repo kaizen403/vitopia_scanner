@@ -77,6 +77,42 @@ export async function gateAuthMiddleware(req: Request, res: Response, next: Next
 }
 
 /**
+ * API Key authentication middleware
+ * Used for administrative and mutation operations
+ */
+export function apiKeyAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  const apiKey = req.headers["x-api-key"] as string;
+  const expectedApiKey = process.env.PRAANA_API_KEY;
+
+  if (!expectedApiKey) {
+    // If no API key is configured in env, we allow the request in development
+    // but warn the developer. In production this should be a critical error.
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRITICAL: PRAANA_API_KEY is not set in production!");
+      res.status(500).json({
+        success: false,
+        error: "Server configuration error. API Key missing.",
+        code: "CONFIG_ERROR",
+      });
+      return;
+    }
+    console.warn("WARNING: PRAANA_API_KEY is not set. API Key check is bypassed.");
+    return next();
+  }
+
+  if (!apiKey || apiKey !== expectedApiKey) {
+    res.status(401).json({
+      success: false,
+      error: "Valid API Key is required for this operation",
+      code: "UNAUTHORIZED_API_ACCESS",
+    });
+    return;
+  }
+
+  next();
+}
+
+/**
  * Error handling middleware
  */
 export function errorHandler(

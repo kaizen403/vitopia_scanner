@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: vitopia-scanner
+    name: praana-scanner
     runtime: node
     plan: free
     region: oregon
@@ -15,11 +15,11 @@ services:
         sync: false
       - key: REDIS_URL
         fromService:
-          name: vitopia-redis
+          name: praana-redis
           type: redis
           property: connectionString
   - type: redis
-    name: vitopia-redis
+    name: praana-redis
     plan: free
     region: oregon
     ipAllowList: []

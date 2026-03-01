@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-BACKUP_DIR="/home/vitap/vitopia_scanner/backups"
+BACKUP_DIR="/home/pims/praana_scanner/backups"
 DB_CONTAINER="opus-postgres"
 DB_NAME="fest"
 DB_USER="postgres"

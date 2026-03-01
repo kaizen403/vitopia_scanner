@@ -6,7 +6,7 @@ async function main() {
     where: { registrationId: { not: null } },
     take: 10
   });
-  console.log("Newly Synced Orders from VTOPIA:");
+  console.log("Newly Synced Orders from PRAANA:");
   syncOrders.forEach((o: any) => {
     console.log(`- Reg ID: ${o.registrationId} | Total: ${o.totalAmount} | Receipt: ${o.receiptId} | Invoice: ${o.invoiceNumber}`);
   });

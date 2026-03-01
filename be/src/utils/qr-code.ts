@@ -1,7 +1,9 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
-const QR_SECRET = process.env.JWT_SECRET || "Salt123";
+// Reading secret inside functions to avoid dotenv race condition
+const getSecret = () => process.env.JWT_SECRET || "Salt123";
+
 
 export interface QRPayload {
   orderId: string;
@@ -15,7 +17,7 @@ export interface QRPayload {
 export function generateQRCode(data: { orderId: string }): string {
   // Decrease QR to exactly 32-char HMAC as requested
   return crypto
-    .createHmac("sha256", QR_SECRET)
+    .createHmac("sha256", getSecret())
     .update(data.orderId)
     .digest("hex")
     .toUpperCase()

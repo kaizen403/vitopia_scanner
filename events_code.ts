@@ -1,26 +1,26 @@
 const EVENT_SEEDS = [
   {
-    "name": "Vitopia2026-Day1",
-    "description": "VITopia 2026 - Day 1",
-    "venue": "VIT-AP Campus",
+    "name": "Praana2026-Day1",
+    "description": "PRAANA 2026 - Day 1",
+    "venue": "PIMS Campus",
     "date": "1771734600000",
     "category": "day",
     "scanOrder": 1,
     "accessToken": "DAY_1"
   },
   {
-    "name": "Vitopia2026-Day2",
-    "description": "VITopia 2026 - Day 2",
-    "venue": "VIT-AP Campus",
+    "name": "Praana2026-Day2",
+    "description": "PRAANA 2026 - Day 2",
+    "venue": "PIMS Campus",
     "date": "1771821000000",
     "category": "day",
     "scanOrder": 2,
     "accessToken": "DAY_2"
   },
   {
-    "name": "Vitopia2026-Day3",
-    "description": "VITopia 2026 - Day 3",
-    "venue": "VIT-AP Campus",
+    "name": "Praana2026-Day3",
+    "description": "PRAANA 2026 - Day 3",
+    "venue": "PIMS Campus",
     "date": "1771907400000",
     "category": "day",
     "scanOrder": 3,
@@ -29,16 +29,16 @@ const EVENT_SEEDS = [
   {
     "name": "Mr. Pranav Sharma on 22 Feb 2026 from 2.30 PM to 3.30 PM",
     "description": "Speaker Event - Mr. Pranav Sharma",
-    "venue": "VIT-AP Campus",
+    "venue": "PIMS Campus",
     "date": "1771750800000",
     "category": "speaker",
     "scanOrder": 4,
     "accessToken": "PRANAV"
   },
   {
-    "name": "VITopia 2026 T-Shirt Distribution",
+    "name": "PRAANA 2026 T-Shirt Distribution",
     "description": "T-Shirt Distribution Counter",
-    "venue": "VIT-AP Campus",
+    "venue": "PIMS Campus",
     "date": "1771903800000",
     "category": "distribution",
     "scanOrder": 6,
@@ -308,7 +308,7 @@ const EVENT_SEEDS = [
   {
     "name": "Mr. Sarat Raja Uday Boddeda on 23rd Feb 2026 from 2.30 PM to 3.30 PM",
     "description": "Speaker Event - Mr. Sarat Raja Uday Boddeda",
-    "venue": "VIT-AP Campus",
+    "venue": "PIMS Campus",
     "date": "1771837200000",
     "category": "speaker",
     "scanOrder": 5,

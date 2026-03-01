@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,30 +10,38 @@ import { generateStyledQRImage } from "./qr-image.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let _resend: Resend | null = null;
+let _transporter: nodemailer.Transporter | null = null;
 let _cachedLogoBuffer: Buffer | null = null;
 let _logoLoadAttempted = false;
 
 function getLogoBuffer(): Buffer | null {
   if (_logoLoadAttempted) return _cachedLogoBuffer;
   _logoLoadAttempted = true;
-  const logoPath = path.join(__dirname, "../assets/vitopia-small.png");
+  const logoPath = path.join(__dirname, "../assets/praana-small.png");
   try {
     _cachedLogoBuffer = fs.readFileSync(logoPath);
   } catch (e) {
-    console.warn("Could not read vitopia-small.png logo for email", e);
+    console.warn("Could not read praana-small.png logo for email", e);
   }
   return _cachedLogoBuffer;
 }
 
-export function getResend(): Resend {
-  if (!_resend) {
-    _resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+export function getTransporter(): nodemailer.Transporter {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "465"),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
   }
-  return _resend;
+  return _transporter;
 }
 
-const FROM_EMAIL = process.env.MAIL_FROM || "VITopia '26 <tickets@vitap.ac.in>";
+const FROM_EMAIL = process.env.MAIL_FROM || "PRAANA '26 <tickets@pims.ac.in>";
 
 export interface TicketEmailData {
   name: string;
@@ -83,7 +91,7 @@ export function buildEmailHtml(data: TicketEmailData): string {
           <!-- Branding Header -->
           <tr>
             <td class="padded" style="padding:40px 30px 24px;text-align:center;background:linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);">
-              <img src="cid:logo" alt="VITopia '26" style="width:150px;max-width:100%;height:auto;display:block;margin:0 auto;" />
+              <img src="cid:logo" alt="PRAANA '26" style="width:150px;max-width:100%;height:auto;display:block;margin:0 auto;" />
             </td>
           </tr>
 
@@ -104,17 +112,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
                 <!-- Event Details Header -->
                 <tr>
                   <td class="padded-sm" style="padding:24px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                    <div style="display:flex; justify-content: space-between; align-items: flex-start;">
-                      <div>
-                        <span style="display:block;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Accessing Event</span>
-                        <h3 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">${data.eventName}</h3>
-                      </div>
-                      ${data.eventName.toLowerCase().includes('day 3') ? `
-                      <div style="background:rgba(154,230,0,0.15); border:1px solid rgba(154,230,0,0.3); border-radius:6px; padding:4px 8px;">
-                        <span style="color:#9AE600; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Final Night</span>
-                      </div>
-                      ` : ''}
-                    </div>
+                    <span style="display:block;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Accessing Event</span>
+                    <h3 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">${data.eventName}</h3>
                   </td>
                 </tr>
                 
@@ -173,14 +172,6 @@ export function buildEmailHtml(data: TicketEmailData): string {
                   </tr>
                   <tr>
                     <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
-                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Gate Entry:</strong> Please enter via the Main Stadium Gate for the Proshow.</td>
-                  </tr>
-                  <tr>
-                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
-                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Timing:</strong> Gates open at 5:00 PM. Event ends at 10:00 PM.</td>
-                  </tr>
-                  <tr>
-                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
                     <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">One-time entry.</strong> Management reserves the right to frisk for security.</td>
                   </tr>
                   <tr>
@@ -188,8 +179,12 @@ export function buildEmailHtml(data: TicketEmailData): string {
                     <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">No re-entry</strong> once you exit the venue perimeter.</td>
                   </tr>
                   <tr>
+                    <td style="padding-bottom:10px;vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
+                    <td style="padding-bottom:10px;"><strong style="color:rgba(255,255,255,0.6);">Prohibited:</strong> Alcohol, tobacco, substances, weapons, outside food/drinks.</td>
+                  </tr>
+                  <tr>
                     <td style="vertical-align:top;width:20px;color:rgba(255,255,255,0.25);">•</td>
-                    <td><strong style="color:rgba(255,255,255,0.6);">Arrive early</strong> — arrive by 5:30 PM to avoid long queues.</td>
+                    <td><strong style="color:rgba(255,255,255,0.6);">Arrive early</strong> — at least 30 minutes before the event.</td>
                   </tr>
                 </table>
               </div>
@@ -200,8 +195,8 @@ export function buildEmailHtml(data: TicketEmailData): string {
           <tr>
             <td class="padded" style="padding:32px 30px;text-align:center;border-top:1px solid rgba(255,255,255,0.05);background:linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);">
               <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.3);">
-                VIT-AP University · Amaravati, Andhra Pradesh · 522237<br />
-                Questions? Contact <a href="mailto:chakkaravarthy.sibi@vitap.ac.in" style="color:#9AE600;text-decoration:none;word-break:break-all;">chakkaravarthy.sibi@vitap.ac.in</a> / <a href="mailto:convenor.vitopia@vitap.ac.in" style="color:#9AE600;text-decoration:none;word-break:break-all;">convenor.vitopia@vitap.ac.in</a>
+                PIMS University · Amaravati, Andhra Pradesh · 522237<br />
+                Questions? Contact <a href="mailto:chakkaravarthy.sibi@pims.ac.in" style="color:#9AE600;text-decoration:none;word-break:break-all;">chakkaravarthy.sibi@pims.ac.in</a> / <a href="mailto:convenor.praana@pims.ac.in" style="color:#9AE600;text-decoration:none;word-break:break-all;">convenor.praana@pims.ac.in</a>
               </p>
             </td>
           </tr>
@@ -244,9 +239,7 @@ export async function prepareTicketEmailPayload(orderId: string, emailOverride?:
     {
       filename: "ticket.png",
       content: qrBuffer,
-      contentType: "image/png",
-      contentId: "qrcode",
-      contentDisposition: "inline",
+      cid: "qrcode",
     },
   ];
 
@@ -254,25 +247,21 @@ export async function prepareTicketEmailPayload(orderId: string, emailOverride?:
     attachments.push({
       filename: "logo.png",
       content: logoBuffer,
-      contentType: "image/png",
-      contentId: "logo",
-      contentDisposition: "inline",
+      cid: "logo",
     });
   }
 
   return {
     from: FROM_EMAIL,
-    to: [recipientEmail],
-    subject: order.event?.accessToken === 'PROSHOW3'
-      ? `Final Proshow Day 3: Your VITopia '26 Ticket`
-      : `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
+    to: recipientEmail,
+    subject: `Your PRAANA '26 Ticket — ${order.event?.name || "Event"}`,
     html: buildEmailHtml({
       name: order.user?.name || "Attendee",
       orderId: order.orderId,
       eventName: order.event?.name || "Event",
       quantity: order.quantity,
       date: formattedDate,
-      venue: order.event?.venue || "VIT-AP Campus",
+      venue: order.event?.venue || "PIMS Campus",
       email: recipientEmail,
     }),
     attachments,
@@ -280,58 +269,25 @@ export async function prepareTicketEmailPayload(orderId: string, emailOverride?:
 }
 
 export async function sendTicketEmailsBatch(orderIds: string[]) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is not configured");
-  }
-
+  const transporter = getTransporter();
   const results: { orderId: string; status: "sent" | "failed"; error?: string }[] = [];
-  const payloads: any[] = [];
-  const validOrderIds: string[] = [];
 
-  await Promise.all(orderIds.map(async (orderId) => {
+  for (const orderId of orderIds) {
     try {
       const payload = await prepareTicketEmailPayload(orderId);
-      payloads.push(payload);
-      validOrderIds.push(orderId);
+      await transporter.sendMail(payload);
+      results.push({ orderId, status: "sent" });
+      await ordersRepo.updateOrder(orderId, { mailed: true });
     } catch (err: any) {
+      console.error(`Failed to send email for order ${orderId}:`, err);
       results.push({ orderId, status: "failed", error: err.message });
-    }
-  }));
-
-  if (payloads.length === 0) return results;
-
-  const CHUNK_SIZE = 100;
-  for (let i = 0; i < payloads.length; i += CHUNK_SIZE) {
-    const chunkPayloads = payloads.slice(i, i + CHUNK_SIZE);
-    const chunkOrderIds = validOrderIds.slice(i, i + CHUNK_SIZE);
-
-    const { data, error } = await getResend().batch.send(chunkPayloads);
-
-    if (error) {
-      for (const id of chunkOrderIds) {
-        results.push({ orderId: id, status: "failed", error: error.message });
-      }
-    } else {
-      for (const id of chunkOrderIds) {
-        results.push({ orderId: id, status: "sent" });
-      }
-      await Promise.all(chunkOrderIds.map(id => ordersRepo.updateOrder(id, { mailed: true })));
     }
   }
 
   return results;
 }
 
-/**
- * Sends a ticket email to the user for a specific order.
- * @param orderId Internal order ID
- * @param emailOverride Optional email to send the ticket to (instead of the user's email)
- */
 export async function sendTicketEmail(orderId: string, emailOverride?: string) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is not configured");
-  }
-
   const order = await ordersRepo.getByOrderId(orderId);
   if (!order) {
     throw new Error(`Order not found: ${orderId}`);
@@ -342,64 +298,16 @@ export async function sendTicketEmail(orderId: string, emailOverride?: string) {
     throw new Error(`No recipient email for order: ${orderId}`);
   }
 
-  // Format the date nicely
-  const eventDate = order.event?.date ? new Date(Number(order.event.date)) : new Date();
-  const formattedDate = eventDate.toLocaleDateString("en-IN", {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const payload = await prepareTicketEmailPayload(orderId, emailOverride);
+  const transporter = getTransporter();
 
-  const qrToken = generateQRCode({ orderId: order.orderId });
-  const qrBuffer = await generateStyledQRImage(qrToken);
-
-  const logoBuffer = getLogoBuffer();
-
-  const attachments: any[] = [
-    {
-      filename: "ticket.png",
-      content: qrBuffer,
-      contentType: "image/png",
-      contentId: "qrcode",
-      contentDisposition: "inline",
-    },
-  ];
-
-  if (logoBuffer) {
-    attachments.push({
-      filename: "logo.png",
-      content: logoBuffer,
-      contentType: "image/png",
-      contentId: "logo",
-      contentDisposition: "inline",
-    });
+  try {
+    const info = await transporter.sendMail(payload);
+    // Update order as mailed
+    await ordersRepo.updateOrder(orderId, { mailed: true });
+    return { success: true, info };
+  } catch (error: any) {
+    console.error("SMTP error:", error);
+    throw new Error(`SMTP error: ${error.message}`);
   }
-
-  const { data, error } = await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: [recipientEmail],
-    subject: order.event?.accessToken === 'PROSHOW3'
-      ? `Final Proshow Day 3: Your VITopia '26 Ticket`
-      : `Your VITopia '26 Ticket — ${order.event?.name || "Event"}`,
-    html: buildEmailHtml({
-      name: order.user?.name || "Attendee",
-      orderId: order.orderId,
-      eventName: order.event?.name || "Event",
-      quantity: order.quantity,
-      date: formattedDate,
-      venue: order.event?.venue || "VIT-AP Campus",
-      email: recipientEmail,
-    }),
-    attachments,
-  });
-
-  if (error) {
-    throw new Error(`Resend error: ${error.message}`);
-  }
-
-  // Update order as mailed
-  await ordersRepo.updateOrder(orderId, { mailed: true });
-
-  return { success: true, data };
 }

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { generateQRCode } from "../utils/qr-code.js";
 import { generateStyledQRImage, generateStyledQRDataUrl } from "../utils/qr-image.js";
 import * as ordersRepo from "../db/orders.js";
+import { apiKeyAuthMiddleware } from "../middleware/auth.js";
 
 const router: Router = Router();
 
@@ -12,7 +13,7 @@ const router: Router = Router();
 router.get("/", async (req: Request, res: Response) => {
   try {
     const { search, paymentStatus, eventId, mailed, checkedIn, dateFrom, dateTo, page, limit } = req.query;
-    
+
     const result = await ordersRepo.listOrders({
       search: search as string,
       paymentStatus: paymentStatus as string,
@@ -24,7 +25,7 @@ router.get("/", async (req: Request, res: Response) => {
       page: page ? parseInt(page as string) : 1,
       limit: limit ? parseInt(limit as string) : 50,
     });
-    
+
     res.json({ success: true, data: result });
   } catch (error) {
     console.error("Error listing orders:", error);
@@ -35,7 +36,7 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/ids", async (req: Request, res: Response) => {
   try {
     const { search, paymentStatus, eventId, mailed, checkedIn, dateFrom, dateTo } = req.query;
-    
+
     const orderIds = await ordersRepo.listOrderIds({
       search: search as string,
       paymentStatus: paymentStatus as string,
@@ -45,7 +46,7 @@ router.get("/ids", async (req: Request, res: Response) => {
       dateFrom: dateFrom as string,
       dateTo: dateTo as string,
     });
-    
+
     res.json({ success: true, data: orderIds });
   } catch (error) {
     console.error("Error listing order IDs:", error);
@@ -56,10 +57,10 @@ router.get("/ids", async (req: Request, res: Response) => {
 
 /**
  * POST /api/orders
- * Create a new order
+ * Create a new order/registration
  */
-router.post("/", async (req: Request, res: Response) => {
-  const { userId, eventId, quantity, registrationId, accessTokens } = req.body;
+router.post("/", apiKeyAuthMiddleware, async (req: Request, res: Response) => {
+  const { userId, eventId, slotId, quantity, registrationId, accessTokens } = req.body;
 
   if (!userId || !eventId || !quantity) {
     res.status(400).json({
@@ -73,6 +74,7 @@ router.post("/", async (req: Request, res: Response) => {
     const result = await ordersRepo.create({
       userId,
       eventId,
+      slotId,
       quantity,
       registrationId,
       accessTokens,
@@ -95,7 +97,7 @@ router.post("/", async (req: Request, res: Response) => {
  * POST /api/orders/:orderId/pay
  * Simulate payment for an order
  */
-router.post("/:orderId/pay", async (req: Request, res: Response) => {
+router.post("/:orderId/pay", apiKeyAuthMiddleware, async (req: Request, res: Response) => {
   const { orderId } = req.params;
 
   try {
@@ -203,7 +205,7 @@ router.get("/:orderId/qr", async (req: Request, res: Response) => {
 
 /**
  * GET /api/orders/:orderId/qr-image
- * Returns the styled VITopia QR code as a PNG image (for display & email).
+ * Returns the styled PRAANA QR code as a PNG image (for display & email).
  * Token/auth logic is identical — only the visual rendering is styled.
  */
 router.get("/:orderId/qr-image", async (req: Request, res: Response) => {
@@ -240,7 +242,7 @@ export default router;
  * PUT /api/orders/:orderId
  * Update an order
  */
-router.put("/:orderId", async (req: Request, res: Response) => {
+router.put("/:orderId", apiKeyAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const updated = await ordersRepo.updateOrder(req.params.orderId, req.body);
     res.json({ success: true, data: updated });
@@ -254,7 +256,7 @@ router.put("/:orderId", async (req: Request, res: Response) => {
  * DELETE /api/orders/:orderId
  * Delete an order
  */
-router.delete("/:orderId", async (req: Request, res: Response) => {
+router.delete("/:orderId", apiKeyAuthMiddleware, async (req: Request, res: Response) => {
   try {
     await ordersRepo.deleteOrder(req.params.orderId);
     res.json({ success: true, message: "Order deleted" });

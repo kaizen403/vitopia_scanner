@@ -113,6 +113,20 @@ export default function TicketPage({
                 <span>{event.venue}</span>
               </div>
             )}
+            {order.slot && (
+              <div className="flex items-center gap-2 text-white/90 mt-2 p-2 bg-white/10 rounded-lg border border-white/20">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-semibold">
+                  Slot: {new Date(order.slot.startTime).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })} - {new Date(order.slot.endTime).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* QR Code */}
@@ -177,19 +191,18 @@ export default function TicketPage({
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Status</span>
                 <span
-                  className={`font-medium ${
-                    order.checkedIn
+                  className={`font-medium ${order.checkedIn
                       ? "text-green-600 dark:text-green-400"
                       : order.paymentStatus === "paid"
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-yellow-600 dark:text-yellow-400"
-                  }`}
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                    }`}
                 >
                   {order.checkedIn
                     ? "Checked In"
                     : order.paymentStatus === "paid"
-                    ? "Valid"
-                    : "Pending Payment"}
+                      ? "Valid"
+                      : "Pending Payment"}
                 </span>
               </div>
               {order.user && (

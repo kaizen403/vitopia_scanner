@@ -15,12 +15,12 @@ import {
 
 function formatEventName(name: string): string {
   if (!name) return "—";
-  if (name === "Vitopia2026-Day1") return "Vitopia Day 1";
-  if (name === "Vitopia2026-Day2") return "Vitopia Day 2";
-  if (name === "Vitopia2026-Day3") return "Vitopia Day 3";
+  if (name === "Praana2026-Day1") return "Praana Day 1";
+  if (name === "Praana2026-Day2") return "Praana Day 2";
+  if (name === "Praana2026-Day3") return "Praana Day 3";
   if (name.includes("Mr. Pranav Sharma")) return "Mr. Pranav Sharma";
   if (name.includes("Sarat Raja Uday Boddeda") || name.includes("Mr. Sarat Raja")) return "Mr. Sarat Raja Uday Boddeda";
-  if (name.includes("T-Shirt Distribution") || name.includes("VITopia 2026 T-Shirt")) return "T-Shirt Distribution";
+  if (name.includes("T-Shirt Distribution") || name.includes("PRAANA 2026 T-Shirt")) return "T-Shirt Distribution";
   return name;
 }
 
@@ -171,7 +171,7 @@ function Dashboard() {
             </Link>
             <div>
               <h1 className="font-heading text-xl tracking-wide text-white">SCAN DASHBOARD</h1>
-              <p className="text-xs text-[#99A1AF]">VITopia &apos;26</p>
+              <p className="text-xs text-[#99A1AF]">PRAANA &apos;26</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ function Dashboard() {
               PER-EVENT BREAKDOWN
             </h2>
             <div className="space-y-4">
-              {analytics.events.filter(ev => ev.eventName !== "Event Registration" && ev.eventName !== "VITopia 2026").map((ev) => {
+              {analytics.events.filter(ev => ev.eventName !== "Event Registration" && ev.eventName !== "PRAANA 2026").map((ev) => {
                 const pct = ev.sold > 0 ? Math.round((ev.checkedIn / ev.sold) * 100) : 0;
                 return (
                   <div key={ev.eventId}>

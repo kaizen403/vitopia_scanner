@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "vitopia.vitap.ac.in",
+        hostname: "praana.pims.ac.in",
         pathname: "/**",
       },
     ],

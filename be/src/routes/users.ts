@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as usersRepo from "../db/users.js";
+import { apiKeyAuthMiddleware } from "../middleware/auth.js";
 
 const router: Router = Router();
 
@@ -7,7 +8,7 @@ const router: Router = Router();
  * POST /api/users
  * Create or get user
  */
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", apiKeyAuthMiddleware, async (req: Request, res: Response) => {
   const { email, name, phone, college } = req.body;
 
   if (!email || !name) {

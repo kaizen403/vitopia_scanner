@@ -7,6 +7,7 @@ import type {
   Prisma,
   PrismaClient,
   User,
+  Slot,
 } from "../../generated/prisma/client.js";
 
 const prisma = basePrisma as unknown as PrismaClient;
@@ -32,6 +33,7 @@ export interface MappedOrderEvent {
   isActive: boolean;
   accessToken: string | null;
   category: string;
+  type: string;
   scanOrder: number;
   createdAt: number;
 }
@@ -52,6 +54,7 @@ export interface MappedOrder {
   tshirtColor: string | null;
   userId: string;
   eventId: string;
+  slotId: string | null;
   quantity: number;
   totalAmount: number;
   paymentStatus: PaymentStatus;
@@ -67,6 +70,7 @@ export interface MappedOrder {
 export interface MappedOrderWithRelations extends MappedOrder {
   user: MappedOrderUser | null;
   event: MappedOrderEvent | null;
+  slot?: { id: string; startTime: number; endTime: number } | null;
 }
 
 
@@ -104,6 +108,7 @@ function mapEvent(dbEvent: Event): MappedOrderEvent {
     isActive: dbEvent.isActive,
     accessToken: dbEvent.accessToken,
     category: dbEvent.category,
+    type: dbEvent.type,
     scanOrder: dbEvent.scanOrder,
     createdAt: Number(dbEvent.createdAt),
   };
@@ -128,6 +133,7 @@ function mapOrder(
     tshirtColor: dbOrder.tshirtColor,
     userId: dbOrder.userId,
     eventId: dbOrder.eventId,
+    slotId: dbOrder.slotId,
     quantity: dbOrder.quantity,
     totalAmount: dbOrder.totalAmount,
     paymentStatus: dbOrder.paymentStatus,
@@ -146,6 +152,7 @@ export async function create(data: {
   orderId?: string;
   userId: string;
   eventId: string;
+  slotId?: string;
   quantity: number;
   receiptId?: string;
   productMeta?: string;
@@ -175,19 +182,40 @@ export async function create(data: {
       throw new Error("User not found");
     }
 
-    const reserved = await tx.order.aggregate({
-      where: {
-        eventId: event.id,
-        paymentStatus: {
-          in: ["pending", "paid"],
-        },
-      },
-      _sum: { quantity: true },
-    });
+    // Check Slot availability if slotId provided
+    if (data.slotId) {
+      const slot = await tx.slot.findUnique({ where: { id: data.slotId } });
+      if (!slot) throw new Error("Slot not found");
+      if (slot.eventId !== event.id) throw new Error("Slot does not belong to this event");
 
-    const reservedQuantity = reserved._sum.quantity ?? 0;
-    if (reservedQuantity + data.quantity > event.capacity) {
-      throw new Error("Not enough tickets available");
+      const slotReserved = await tx.order.aggregate({
+        where: {
+          slotId: slot.id,
+          paymentStatus: { in: ["pending", "paid"] },
+        },
+        _sum: { quantity: true },
+      });
+
+      const slotReservedQuantity = slotReserved._sum.quantity ?? 0;
+      if (slotReservedQuantity + data.quantity > slot.capacity) {
+        throw new Error("Not enough tickets available in this slot");
+      }
+    } else {
+      // Check general event capacity
+      const reserved = await tx.order.aggregate({
+        where: {
+          eventId: event.id,
+          paymentStatus: {
+            in: ["pending", "paid"],
+          },
+        },
+        _sum: { quantity: true },
+      });
+
+      const reservedQuantity = reserved._sum.quantity ?? 0;
+      if (reservedQuantity + data.quantity > event.capacity) {
+        throw new Error("Not enough tickets available for this event");
+      }
     }
 
     const now = BigInt(Date.now());
@@ -216,6 +244,7 @@ export async function create(data: {
         tshirtColor: data.tshirtColor,
         userId: user.id,
         eventId: event.id,
+        slotId: data.slotId,
         quantity: data.quantity,
         totalAmount: event.price * data.quantity,
         paymentStatus: "pending",
@@ -265,6 +294,7 @@ export async function getByOrderId(
     include: {
       user: true,
       event: true,
+      slot: true,
     },
   });
 
@@ -274,11 +304,17 @@ export async function getByOrderId(
 
   const mappedUser = order.user ? mapUser(order.user) : null;
   const mappedEvent = order.event ? mapEvent(order.event) : null;
+  const mappedSlot = order.slot ? {
+    id: order.slot.id,
+    startTime: Number(order.slot.startTime),
+    endTime: Number(order.slot.endTime),
+  } : null;
 
   return {
     ...mapOrder(order),
     user: mappedUser,
     event: mappedEvent,
+    slot: mappedSlot,
   };
 }
 
@@ -384,6 +420,7 @@ export async function listOrders(filters: {
       include: {
         user: true,
         event: true,
+        slot: true,
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -396,10 +433,16 @@ export async function listOrders(filters: {
     orders: orders.map(order => {
       const mappedUser = order.user ? mapUser(order.user) : null;
       const mappedEvent = order.event ? mapEvent(order.event) : null;
+      const mappedSlot = order.slot ? {
+        id: order.slot.id,
+        startTime: Number(order.slot.startTime),
+        endTime: Number(order.slot.endTime),
+      } : null;
       return {
         ...mapOrder(order),
         user: mappedUser,
         event: mappedEvent,
+        slot: mappedSlot,
       };
     }),
     total,
@@ -442,16 +485,22 @@ export async function updateOrder(orderId: string, data: any) {
       mailed: data.mailed !== undefined ? data.mailed : order.mailed,
       updatedAt: BigInt(Date.now())
     },
-    include: { user: true, event: true }
+    include: { user: true, event: true, slot: true }
   });
 
   const mappedUser = updated.user ? mapUser(updated.user) : null;
   const mappedEvent = updated.event ? mapEvent(updated.event) : null;
+  const mappedSlot = updated.slot ? {
+    id: updated.slot.id,
+    startTime: Number(updated.slot.startTime),
+    endTime: Number(updated.slot.endTime),
+  } : null;
 
   return {
     ...mapOrder(updated),
     user: mappedUser,
-    event: mappedEvent
+    event: mappedEvent,
+    slot: mappedSlot,
   };
 }
 

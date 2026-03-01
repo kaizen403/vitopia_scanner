@@ -7,7 +7,7 @@
 -- AlterTable
 ALTER TABLE "gates" ADD COLUMN     "convex_id" TEXT,
 ADD COLUMN     "gender" TEXT NOT NULL DEFAULT 'M',
-ADD COLUMN     "secret" TEXT NOT NULL DEFAULT 'vitopia2026';
+ADD COLUMN     "secret" TEXT NOT NULL DEFAULT 'praana2026';
 
 -- CreateIndex
 CREATE UNIQUE INDEX "gates_convex_id_key" ON "gates"("convex_id");
